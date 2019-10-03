@@ -88,10 +88,10 @@ void asignar(FILE* fpasm, char* nombre, int es_variable){
   fprintf(fpasm, "pop eax\n");
   /*Si es una variable, guardamos en la variable nombre el contenido de la referencia sacada de la pila*/
   if(es_variable==1){
-    fprintf(fpasm, "mov %s, [eax]\n", nombre);
+    fprintf(fpasm, "mov [_%s], [eax]\n", nombre);
   /*Si no, guardamos en nombre el valor sacado de la pila*/
   }else{
-    fprintf(fpasm, "mov %s, eax\n", nombre);
+    fprintf(fpasm, "mov [_%s], eax\n", nombre);
   }
 }
 
@@ -121,16 +121,16 @@ void lectura_registro(FILE* fpasm, int es_variable_1){
    Funcion auxiliar encargada de la lectura de los operandos en registros eax, ebx desde la pila, bien sea por valor o por referencia.
 */
 void lectura_registros(FILE* fpasm, int es_variable_1, int es_variable_2){
-   fprintf(fpasm, "pop dword eax\n");
-   if(es_variable_1 == 1){
-      /* Hacemos onversion de referencia a valor */
-      fprintf(fpasm, "mov eax, [eax]\n");
-   }
-
    fprintf(fpasm, "pop dword ebx\n");
    if(es_variable_2 == 1){
       /* Hacemos onversion de referencia a valor */
       fprintf(fpasm, "mov ebx, [ebx]\n");
+   }
+
+   fprintf(fpasm, "pop dword eax\n");
+   if(es_variable_1 == 1){
+      /* Hacemos onversion de referencia a valor */
+      fprintf(fpasm, "mov eax, [eax]\n");
    }
 }
 
@@ -209,7 +209,7 @@ void no(FILE* fpasm, int es_variable, int cuantos_no){
    fprintf(fpasm, "jz neg_cero_%d\n", cuantos_no);
    fprintf(fpasm, "mov eax, 0\n");
    /* Si hemos escrito un 0, saltamos al final del algoritmo*/
-   fprintf(fpasm, "neg_fin_%d:\n", cuantos_no);
+   fprintf(fpasm, "jmp neg_fin_%d\n", cuantos_no);
    /* Rama del if en la que se escribe el 1 */
    fprintf(fpasm, "neg_cero_%d:\n", cuantos_no);
    fprintf(fpasm, "mov eax, 1\n");
@@ -229,20 +229,20 @@ void igual(FILE* fpasm, int es_variable_1, int es_variable_2, int etiqueta){
   fprintf(fpasm, "je equal_%d\n", etiqueta);
   fprintf(fpasm, "push dword 0\n");
   fprintf(fpasm, "jmp equal_end_%d\n", etiqueta);
-  fprintf(fpasm, "equal_%d\n", etiqueta);
+  fprintf(fpasm, "equal_%d:\n", etiqueta);
   fprintf(fpasm, "push dword 1\n");
-  fprintf(fpasm, "equal_end_%d\n", etiqueta);
+  fprintf(fpasm, "equal_end_%d:\n", etiqueta);
 }
 
 void distinto(FILE* fpasm, int es_variable_1, int es_variable_2, int etiqueta){
   lectura_registros(fpasm, es_variable_1, es_variable_2);
   fprintf(fpasm, "cmp eax, ebx\n");
-  fprintf(fpasm, "jne fidd_%d\n", etiqueta);
+  fprintf(fpasm, "jne diff_%d\n", etiqueta);
   fprintf(fpasm, "push dword 0\n");
   fprintf(fpasm, "jmp diff_end_%d\n", etiqueta);
-  fprintf(fpasm, "diff_%d\n", etiqueta);
+  fprintf(fpasm, "diff_%d:\n", etiqueta);
   fprintf(fpasm, "push dword 1\n");
-  fprintf(fpasm, "diff_end_%d\n", etiqueta);
+  fprintf(fpasm, "diff_end_%d:\n", etiqueta);
 }
 
 void menor_igual(FILE* fpasm, int es_variable_1, int es_variable_2, int etiqueta){
@@ -251,9 +251,9 @@ void menor_igual(FILE* fpasm, int es_variable_1, int es_variable_2, int etiqueta
   fprintf(fpasm, "jle less_eq_%d\n", etiqueta);
   fprintf(fpasm, "push dword 0\n");
   fprintf(fpasm, "jmp less_eq_end_%d\n", etiqueta);
-  fprintf(fpasm, "less_eq_%d\n", etiqueta);
+  fprintf(fpasm, "less_eq_%d:\n", etiqueta);
   fprintf(fpasm, "push dword 1\n");
-  fprintf(fpasm, "less_eq_end_%d\n", etiqueta);
+  fprintf(fpasm, "less_eq_end_%d:\n", etiqueta);
 }
 void mayor_igual(FILE* fpasm, int es_variable_1, int es_variable_2, int etiqueta){
   lectura_registros(fpasm, es_variable_1, es_variable_2);
@@ -261,9 +261,9 @@ void mayor_igual(FILE* fpasm, int es_variable_1, int es_variable_2, int etiqueta
   fprintf(fpasm, "jge more_eq_%d\n", etiqueta);
   fprintf(fpasm, "push dword 0\n");
   fprintf(fpasm, "jmp more_eq_end_%d\n", etiqueta);
-  fprintf(fpasm, "more_eq_%d\n", etiqueta);
+  fprintf(fpasm, "more_eq_%d:\n", etiqueta);
   fprintf(fpasm, "push dword 1\n");
-  fprintf(fpasm, "more_eq_end_%d\n", etiqueta);
+  fprintf(fpasm, "more_eq_end_%d:\n", etiqueta);
 }
 void menor(FILE* fpasm, int es_variable_1, int es_variable_2, int etiqueta){
   lectura_registros(fpasm, es_variable_1, es_variable_2);
@@ -271,9 +271,9 @@ void menor(FILE* fpasm, int es_variable_1, int es_variable_2, int etiqueta){
   fprintf(fpasm, "jl less_%d\n", etiqueta);
   fprintf(fpasm, "push dword 0\n");
   fprintf(fpasm, "jmp less_end_%d\n", etiqueta);
-  fprintf(fpasm, "less_%d\n", etiqueta);
+  fprintf(fpasm, "less_%d:\n", etiqueta);
   fprintf(fpasm, "push dword 1\n");
-  fprintf(fpasm, "less_end_%d\n", etiqueta);
+  fprintf(fpasm, "less_end_%d:\n", etiqueta);
 }
 
 void mayor(FILE* fpasm, int es_variable_1, int es_variable_2, int etiqueta){
@@ -282,9 +282,9 @@ void mayor(FILE* fpasm, int es_variable_1, int es_variable_2, int etiqueta){
   fprintf(fpasm, "jg more_%d\n", etiqueta);
   fprintf(fpasm, "push dword 0\n");
   fprintf(fpasm, "jmp more_end_%d\n", etiqueta);
-  fprintf(fpasm, "more_%d\n", etiqueta);
+  fprintf(fpasm, "more_%d:\n", etiqueta);
   fprintf(fpasm, "push dword 1\n");
-  fprintf(fpasm, "more_end_%d\n", etiqueta);
+  fprintf(fpasm, "more_end_%d:\n", etiqueta);
 }
 
 /* FUNCIONES DE ESCRITURA Y LECTURA */
@@ -319,3 +319,35 @@ void escribir(FILE* fpasm, int es_variable, int tipo){
   /* Pasamos a una linea nueva */
   fprintf(fpasm, "call print_endofline\n");
 }
+
+
+void suma_iterativa(FILE *fpasm, char *nombre1, char *nombre2){
+  /* Leemos las dos variables */
+  leer(fpasm, nombre1, ENTERO);
+  leer(fpasm, nombre2, ENTERO);
+
+  /* Cargamos las variables en los registros */
+  fprintf(fpasm, "mov dword ecx, [_%s]\n", nombre1);
+  fprintf(fpasm, "mov dword ebx, [_%s]\n", nombre2);
+
+  /* Iniciamos el bucle while */
+  fprintf(fpasm, "while:\n");
+  fprintf(fpasm, "cmp ebx, 0\n");
+  fprintf(fpasm, "jz fin\n");
+  /* Sumamos las dos variables */
+  fprintf(fpasm, "add ecx, ebx\n");
+
+  /* Imprimimos el resultado de la operación y leemos Y de nuevo */
+  fprintf(fpasm, "push dword ecx\n");
+  escribir(fpasm, 0, ENTERO);
+  leer(fpasm, nombre2, ENTERO);
+
+  fprintf(fpasm, "mov dword ebx, [_%s]\n", nombre2);
+  /* Volvemos a la condición del bucle while */
+  fprintf(fpasm, "jmp while\n");
+  /* Etiqueta que denota el final de la rutina */
+  fprintf(fpasm, "fin:\n");
+}
+
+
+
