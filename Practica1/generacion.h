@@ -39,7 +39,7 @@ void escribir_segmento_codigo(FILE* fpasm);
 */
 
 void escribir_inicio_main(FILE* fpasm);
-/* 
+/*
    En este punto se debe escribir, al menos, la etiqueta main y la sentencia que guarda el puntero de pila en su variable (se recomienda usar __esp).
 */
 
@@ -61,7 +61,7 @@ void escribir_operando(FILE* fpasm, char* nombre, int es_variable);
 
 void asignar(FILE* fpasm, char* nombre, int es_variable);
 /*
--	Genera el código para asignar valor a la variable de nombre nombre. 
+-	Genera el código para asignar valor a la variable de nombre nombre.
 -	Se toma el valor de la cima de la pila.
 -	El último argumento es el que indica si lo que hay en la cima de la pila es una referencia (1) o ya un valor explícito (0).
 */
@@ -85,7 +85,7 @@ void y(FILE* fpasm, int es_variable_1, int es_variable_2);
 
 void cambiar_signo(FILE* fpasm, int es_variable);
 /*
-   Función aritmética de cambio de signo. 
+   Función aritmética de cambio de signo.
    Es análoga a las binarias, excepto que sólo requiere de un acceso a la pila ya que sólo usa un operando.
 */
 
@@ -96,7 +96,7 @@ void no(FILE* fpasm, int es_variable, int cuantos_no);
 */
 
 /* FUNCIONES COMPARATIVAS */
-/* 
+/*
    Todas estas funciones reciben como argumento si los elementos a comparar son o no variables. El resultado de las operaciones, que siempre será un booleano (“1” si se cumple la comparación y “0” si no se cumple), se deja en la pila como en el resto de operaciones. Se deben usar etiquetas para poder gestionar los saltos necesarios para implementar las comparaciones.
 */
 void igual(FILE* fpasm, int es_variable1, int es_variable2, int etiqueta);
@@ -113,5 +113,137 @@ void mayor(FILE* fpasm, int es_variable1, int es_variable2, int etiqueta);
 */
 void leer(FILE* fpasm, char* nombre, int tipo);
 void escribir(FILE* fpasm, int es_variable, int tipo);
+
+/* Generación de código para el inicio de una estructura if-then-else
+Como es el inicio de uno bloque de control de flujo de programa que requiere de una nueva
+etiqueta deben ejecutarse antes las tareas correspondientes a esta situación
+exp_es_variable
+Es 1 si la expresión de la condición es algo asimilable a una variable (identificador,
+elemento de vector)
+Es 0 en caso contrario (constante u otro tipo de expresión)*/
+void ifthenelse_inicio(FILE * fpasm, int exp_es_variable, int etiqueta);
+
+/* Generación de código para el inicio de una estructura if-then
+Como es el inicio de uno bloque de control de flujo de programa que requiere de una nueva
+etiqueta deben ejecutarse antes las tareas correspondientes a esta situación
+exp_es_variable
+Es 1 si la expresión de la condición es algo asimilable a una variable (identificador,
+elemento de vector)
+Es 0 en caso contrario (constante u otro tipo de expresión)*/
+void ifthen_inicio(FILE * fpasm, int exp_es_variable, int etiqueta);
+
+/* Generación de código para el fin de una estructura if-then
+Como es el fin de uno bloque de control de flujo de programa que hace uso de la etiqueta
+del mismo se requiere que antes de su invocación tome el valor de la etiqueta que le toca
+según se ha explicado
+Y tras ser invocada debe realizar el proceso para ajustar la información de las etiquetas
+puesto que se ha liberado la última de ellas.*/
+void ifthen_fin(FILE * fpasm, int etiqueta);
+
+/* Generación de código para el fin de la rama then de una estructura if-then-else
+Sólo necesita usar la etiqueta adecuada, aunque es el final de una rama, luego debe venir
+otra (la rama else) antes de que se termine la estructura y se tenga que ajustar las etiquetas
+por lo que sólo se necesita que se utilice la etiqueta que corresponde al momento actual.*/
+void ifthenelse_fin_then( FILE * fpasm, int etiqueta);
+
+/* Generación de código para el fin de una estructura if-then-else
+Como es el fin de uno bloque de control de flujo de programa que hace uso de la etiqueta
+del mismo se requiere que antes de su invocación tome el valor de la etiqueta que le toca
+según se ha explicado
+Y tras ser invocada debe realizar el proceso para ajustar la información de las etiquetas
+puesto que se ha liberado la última de ellas*/
+void ifthenelse_fin( FILE * fpasm, int etiqueta);
+
+/* Generación de código para el inicio de una estructura while
+Como es el inicio de uno bloque de control de flujo de programa que requiere de una nueva
+etiqueta deben ejecutarse antes las tareas correspondientes a esta situación
+exp_es_variable
+Es 1 si la expresión de la condición es algo asimilable a una variable (identificador,
+elemento de vector)
+Es 0 en caso contrario (constante u otro tipo de expresión)*/
+void while_inicio(FILE * fpasm, int etiqueta);
+
+/* Generación de código para el momento en el que se ha generado el código de la expresión
+de control del bucle
+Sólo necesita usar la etiqueta adecuada, por lo que sólo se necesita que se recupere el valor
+de la etiqueta que corresponde al momento actual.
+/* exp_es_variable
+Es 1 si la expresión de la condición es algo asimilable a una variable (identificador,
+o elemento de vector)
+Es 0 en caso contrario (constante u otro tipo de expresión)*/
+void while_exp_pila (FILE * fpasm, int exp_es_variable, int etiqueta);
+
+/* Generación de código para el final de una estructura while
+Como es el fin de uno bloque de control de flujo de programa que hace uso de la etiqueta
+del mismo se requiere que antes de su invocación tome el valor de la etiqueta que le toca
+según se ha explicado
+Y tras ser invocada debe realizar el proceso para ajustar la información de las etiquetas
+puesto que se ha liberado la última de ellas.*/
+void while_fin( FILE * fpasm, int etiqueta);
+
+/* Generación de código para indexar un vector
+Cuyo nombre es nombre_vector
+Declarado con un tamaño tam_max
+La expresión que lo indexa está en la cima de la pila
+Puede ser una variable (o algo equivalente) en cuyo caso exp_es_direccion vale 1.
+Puede ser un valor concreto (en ese caso exp_es_direccion vale 0)
+Según se especifica en el material, es suficiente con utilizar dos registros para realizar esta
+tarea.*/
+void escribir_elemento_vector(FILE * fpasm,char * nombre_vector, int tam_max, int exp_es_direccion);
+
+/* Generación de código para iniciar la declaración de una función.
+Es necesario proporcionar
+Su nombre
+Su número de variables locales*/
+void declararFuncion(FILE * fpasm, char * nombre_funcion, int num_var_loc);
+
+/* Generación de código para el retorno de una función.
+La expresión que se retorna está en la cima de la pila.
+Puede ser una variable (o algo equivalente) en cuyo caso exp_es_direccion vale 1
+Puede ser un valor concreto (en ese caso exp_es_direccion vale 0)*/
+void retornarFuncion(FILE * fpasm, int es_variable);
+
+/* Función para dejar en la cima de la pila la dirección efectiva del parámetro que ocupa la
+posición pos_parametro (recuerda que los parámetros se ordenan con origen 0) de un total
+de num_total_parametros*/
+void escribirParametro(FILE* fpasm, int pos_parametro, int num_total_parametros);
+
+/* Función para dejar en la cima de la pila la dirección efectiva de la variable local que ocupa
+la posición posicion_variable_local (recuerda que ordenadas con origen 1)*/
+void escribirVariableLocal(FILE* fpasm, int posicion_variable_local);
+
+/* Función para poder asignar a un destino que no es una variable “global” (tipo _x) por
+ejemplo parámetros o variables globales (ya que en ese caso su nombre real de alto nivel, no
+se tiene en cuenta pues es realmente un desplazamiento a partir de ebp: ebp+4 o ebp-8 por
+ejemplo.
+Se debe asumir que en la pila estará
+Primero (en la cima) lo que hay que asignar
+Debajo (se ha introducido en la pila antes) la dirección donde hay que asignar
+es_variable
+Es 1 si la expresión que se va a asignar es algo asimilable a una variable (identificador, o elemento de vector)
+Es 0 en caso contrario (constante u otro tipo de expresión)*/
+
+void asignarDestinoEnPila(FILE* fpasm, int es_variable);
+
+/* Como habrás visto en el material, nuestro convenio de llamadas a las funciones asume que
+los argumentos se pasan por valor, esto significa que siempre se dejan en la pila “valores” y
+no “variables”
+Esta función realiza la tarea de dado un operando escrito en la pila y sabiendo si es variable
+o no (es_variable) se deja en la pila el valor correspondiente*/
+void operandoEnPilaAArgumento(FILE * fpasm, int es_variable);
+
+/* Esta función genera código para llamar a la función nombre_funcion asumiendo que los
+argumentos están en la pila en el orden fijado en el material de la asignatura.
+Debe dejar en la cima de la pila el retorno de la función tras haberla limpiado de sus
+argumentos
+Para limpiar la pila puede utilizar la función de nombre limpiarPila*/
+void llamarFuncion(FILE * fpasm, char * nombre_funcion, int num_argumentos);
+
+/* Genera código para limpiar la pila tras invocar una función
+Esta función es necesaria para completar la llamada a métodos, su gestión dificulta el
+conocimiento por parte de la función de llamada del número de argumentos que hay en la
+pila*/
+void limpiarPila(FILE * fpasm, int num_argumentos);
+
 
 #endif

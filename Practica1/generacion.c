@@ -15,6 +15,8 @@ void escribir_cabecera_bss(FILE* fpasm){
 */
 void escribir_subseccion_data(FILE* fpasm){
   fprintf(fpasm, "segment .data\n");
+  fprintf(fpasm, "_division_by_cero_s db \"Division por cero\"\n");
+  fprintf(fpasm, "_out_of_range_s db \"Indice fuera de rango\"\n");
 }
 
 /*
@@ -58,8 +60,23 @@ void escribir_inicio_main(FILE* fpasm){
          ·Salir del programa (ret).
 */
 void escribir_fin(FILE* fpasm){
+  fprintf(fpasm, "_end:\n");
   fprintf(fpasm, "mov dword esp, [__esp]\n");
   fprintf(fpasm, "ret\n");
+
+  /* Implementamos el error de division por cero */
+  fprintf(fpasm, "_division_by_cero:\n");
+  fprintf(fpasm, "push dword _division_by_cero_s\n");
+  fprintf(fpasm, "call print_string\n");
+  fprintf(fpasm, "add esp, 4\n");
+  fprintf(fpasm, "jmp _end\n");
+
+  /* Implementamos el error de indice fuera de rango */
+  fprintf(fpasm, "_out_of_range:\n");
+  fprintf(fpasm, "push dword _out_of_range_s\n");
+  fprintf(fpasm, "call print_string\n");
+  fprintf(fpasm, "add esp, 4\n");
+  fprintf(fpasm, "jmp _end\n");
 }
 
 /*
@@ -164,7 +181,10 @@ void dividir(FILE* fpasm, int es_variable_1, int es_variable_2){
 
    /* Extendemos el signo de eax para tener el dividendo en edx:eax */
    fprintf(fpasm, "cdq\n");
-   /* TODO Comprobar division por cero y saltar al error si es necesario */
+   /* Comprobamos division por cero y saltar al error si es necesario */
+   fprintf(fpasm, "cmp ebx, 0\n");
+   fprintf(fpasm, "je _division_by_cero\n");
+   /* Si no ha habido division por cero, hacemos la division y guardamso el resultado */
    fprintf(fpasm, "idiv ebx\n");
    fprintf(fpasm, "push dword eax\n");
 }
@@ -349,12 +369,20 @@ void suma_iterativa(FILE *fpasm, char *nombre1, char *nombre2){
   fprintf(fpasm, "fin:\n");
 }
 
+/* Generación de código para el inicio de una estructura if-then-else
+Como es el inicio de uno bloque de control de flujo de programa que requiere de una nueva
+etiqueta deben ejecutarse antes las tareas correspondientes a esta situación
+exp_es_variable
+Es 1 si la expresión de la condición es algo asimilable a una variable (identificador,
+elemento de vector)
+Es 0 en caso contrario (constante u otro tipo de expresión)*/
 void ifthenelse_inicio(FILE * fpasm, int exp_es_variable, int etiqueta){
 	lectura_registro(fpasm, exp_es_variable);
 	fprintf(fpasm, "cmp eax, 0\n");
 	fprintf(fpasm, "je else_%d\n", etiqueta);
 }
-/* Generación de código para el inicio de una estructura if-then-else
+
+/* Generación de código para el inicio de una estructura if-then
 Como es el inicio de uno bloque de control de flujo de programa que requiere de una nueva
 etiqueta deben ejecutarse antes las tareas correspondientes a esta situación
 exp_es_variable
@@ -366,46 +394,36 @@ void ifthen_inicio(FILE * fpasm, int exp_es_variable, int etiqueta){
 	fprintf(fpasm, "cmp eax, 0\n");
 	fprintf(fpasm, "je endif_%d\n", etiqueta);
 }
-/* Generación de código para el inicio de una estructura if-then
-Como es el inicio de uno bloque de control de flujo de programa que requiere de una nueva
-etiqueta deben ejecutarse antes las tareas correspondientes a esta situación
-exp_es_variable
-Es 1 si la expresión de la condición es algo asimilable a una variable (identificador,
-elemento de vector)
-Es 0 en caso contrario (constante u otro tipo de expresión)*/
 
-void ifthen_fin(FILE * fpasm, int etiqueta){
-	fprintf(fpasm, "endif_%d:\n", etiqueta);
-}
 /* Generación de código para el fin de una estructura if-then
 Como es el fin de uno bloque de control de flujo de programa que hace uso de la etiqueta
 del mismo se requiere que antes de su invocación tome el valor de la etiqueta que le toca
 según se ha explicado
 Y tras ser invocada debe realizar el proceso para ajustar la información de las etiquetas
 puesto que se ha liberado la última de ellas.*/
-
-void ifthenelse_fin_then( FILE * fpasm, int etiqueta){
-	fprintf(fpasm, "jmp endif_%d\n", etiqueta);
-	fprintf(fpasm, "else_%d:\n", etiqueta);
+void ifthen_fin(FILE * fpasm, int etiqueta){
+	fprintf(fpasm, "endif_%d:\n", etiqueta);
 }
+
 /* Generación de código para el fin de la rama then de una estructura if-then-else
 Sólo necesita usar la etiqueta adecuada, aunque es el final de una rama, luego debe venir
 otra (la rama else) antes de que se termine la estructura y se tenga que ajustar las etiquetas
 por lo que sólo se necesita que se utilice la etiqueta que corresponde al momento actual.*/
-
-void ifthenelse_fin( FILE * fpasm, int etiqueta){
-	fprintf(fpasm, "endif_%d:\n", etiqueta);
+void ifthenelse_fin_then( FILE * fpasm, int etiqueta){
+	fprintf(fpasm, "jmp endif_%d\n", etiqueta);
+	fprintf(fpasm, "else_%d:\n", etiqueta);
 }
+
 /* Generación de código para el fin de una estructura if-then-else
 Como es el fin de uno bloque de control de flujo de programa que hace uso de la etiqueta
 del mismo se requiere que antes de su invocación tome el valor de la etiqueta que le toca
 según se ha explicado
 Y tras ser invocada debe realizar el proceso para ajustar la información de las etiquetas
 puesto que se ha liberado la última de ellas*/
-
-void while_inicio(FILE * fpasm, int etiqueta){
-	fprintf(fpasm, "while_%d:\n", etiqueta);
+void ifthenelse_fin( FILE * fpasm, int etiqueta){
+	fprintf(fpasm, "endif_%d:\n", etiqueta);
 }
+
 /* Generación de código para el inicio de una estructura while
 Como es el inicio de uno bloque de control de flujo de programa que requiere de una nueva
 etiqueta deben ejecutarse antes las tareas correspondientes a esta situación
@@ -413,12 +431,10 @@ exp_es_variable
 Es 1 si la expresión de la condición es algo asimilable a una variable (identificador,
 elemento de vector)
 Es 0 en caso contrario (constante u otro tipo de expresión)*/
-
-void while_exp_pila (FILE * fpasm, int exp_es_variable, int etiqueta){
-	lectura_registro(fpasm, exp_es_variable);
-	fprintf(fpasm, "cmp eax, 0\n");
-	fprintf(fpasm, "je whilend_%d\n", etiqueta);
+void while_inicio(FILE * fpasm, int etiqueta){
+	fprintf(fpasm, "while_%d:\n", etiqueta);
 }
+
 /* Generación de código para el momento en el que se ha generado el código de la expresión
 de control del bucle
 Sólo necesita usar la etiqueta adecuada, por lo que sólo se necesita que se recupere el valor
@@ -427,23 +443,23 @@ de la etiqueta que corresponde al momento actual.
 Es 1 si la expresión de la condición es algo asimilable a una variable (identificador,
 o elemento de vector)
 Es 0 en caso contrario (constante u otro tipo de expresión)*/
-
-void while_fin( FILE * fpasm, int etiqueta){
-	fprintf(fpasm, "whilend_%d:\n", etiqueta);
+void while_exp_pila (FILE * fpasm, int exp_es_variable, int etiqueta){
+	lectura_registro(fpasm, exp_es_variable);
+	fprintf(fpasm, "cmp eax, 0\n");
+	fprintf(fpasm, "je whilend_%d\n", etiqueta);
 }
+
 /* Generación de código para el final de una estructura while
 Como es el fin de uno bloque de control de flujo de programa que hace uso de la etiqueta
 del mismo se requiere que antes de su invocación tome el valor de la etiqueta que le toca
 según se ha explicado
 Y tras ser invocada debe realizar el proceso para ajustar la información de las etiquetas
 puesto que se ha liberado la última de ellas.*/
-
-void escribir_elemento_vector(FILE * fpasm,char * nombre_vector, int tam_max, int exp_es_direccion){
-	lectura_registros(fpasm, 0, exp_es_direccion);
-	fprintf(fpasm, "cmp ebx, %d\n", tam_max);
-	fprintf(fpasm, "jge error_stackoverflow:");
-	fprintf(fpasm, "mov [%s + ebx], eax\n", nombre_vector);
+void while_fin( FILE * fpasm, int etiqueta){
+  fprintf(fpasm, "jmp while_%d\n", etiqueta);
+	fprintf(fpasm, "whilend_%d:\n", etiqueta);
 }
+
 /* Generación de código para indexar un vector
 Cuyo nombre es nombre_vector
 Declarado con un tamaño tam_max
@@ -452,41 +468,59 @@ Puede ser una variable (o algo equivalente) en cuyo caso exp_es_direccion vale 1
 Puede ser un valor concreto (en ese caso exp_es_direccion vale 0)
 Según se especifica en el material, es suficiente con utilizar dos registros para realizar esta
 tarea.*/
+void escribir_elemento_vector(FILE * fpasm,char * nombre_vector, int tam_max, int exp_es_direccion){
+	lectura_registro(fpasm, exp_es_direccion);
+  /* Comprobamos que el indice esta en el rango adecuado */
+  fprintf(fpasm, "cmp eax, 0\n");
+  fprintf(fpasm, "jl _out_of_range:");
+	fprintf(fpasm, "cmp eax, %d\n", tam_max);
+	fprintf(fpasm, "jge _out_of_range:");
 
-void declararFuncion(FILE * fd_asm, char * nombre_funcion, int num_var_loc){
-
+	fprintf(fpasm, "lea eax, [_%s + eax*4]\n", nombre_vector);
+  fprintf(fpasm, "push dword eax\n");
 }
+
 /* Generación de código para iniciar la declaración de una función.
 Es necesario proporcionar
 Su nombre
 Su número de variables locales*/
-
-void retornarFuncion(FILE * fd_asm, int es_variable){
-
+void declararFuncion(FILE * fpasm, char * nombre_funcion, int num_var_loc){
+    fprintf(fpasm, "_%s:\n", nombre_funcion);
+    fprintf(fpasm, "push ebp\n");
+    fprintf(fpasm, "mov ebp, esp\n");
+    fprintf(fpasm, "sub esp, %d\n", 4*num_var_loc);
 }
+
 /* Generación de código para el retorno de una función.
 La expresión que se retorna está en la cima de la pila.
 Puede ser una variable (o algo equivalente) en cuyo caso exp_es_direccion vale 1
 Puede ser un valor concreto (en ese caso exp_es_direccion vale 0)*/
-
-void escribirParametro(FILE* fpasm, int pos_parametro, int num_total_parametros){
-
+void retornarFuncion(FILE * fpasm, int es_variable){
+    lectura_registro(fpasm, es_variable);
+    fprintf(fpasm, "mov esp, ebp\n");
+    fprintf(fpasm, "pop ebp\n");
+    fprintf(fpasm, "ret\n");
 }
+
 /* Función para dejar en la cima de la pila la dirección efectiva del parámetro que ocupa la
 posición pos_parametro (recuerda que los parámetros se ordenan con origen 0) de un total
 de num_total_parametros*/
+void escribirParametro(FILE* fpasm, int pos_parametro, int num_total_parametros){
+    int index;
+    /* Calculamos el indice para indexar en la pila */
+    index = 4*(1 + (num_total_parametros - pos_parametro));
 
-void escribirVariableLocal(FILE* fpasm, int posicion_variable_local){
-	fprintf(fpasm, "push dword %d\n", posicion_variable_local);
+    fprintf(fpasm, "lea eax, [ebp + %d]\n", index);
+    fprintf(fpasm, "push dword eax\n");
 }
+
 /* Función para dejar en la cima de la pila la dirección efectiva de la variable local que ocupa
 la posición posicion_variable_local (recuerda que ordenadas con origen 1)*/
-
-void asignarDestinoEnPila(FILE* fpasm, int es_variable){
-	lectura_registro(fpasm, es_variable);
-	fprintf(fpasm, "pop ebx\n");
-	fprintf(fpasm, "mov [ebx], eax\n");
+void escribirVariableLocal(FILE* fpasm, int posicion_variable_local){
+    fprintf(fpasm, "lea eax, [ebp - %d]\n", 4*posicion_variable_local);
+  	fprintf(fpasm, "push dword eax\n");
 }
+
 /* Función para poder asignar a un destino que no es una variable “global” (tipo _x) por
 ejemplo parámetros o variables globales (ya que en ese caso su nombre real de alto nivel, no
 se tiene en cuenta pues es realmente un desplazamiento a partir de ebp: ebp+4 o ebp-8 por
@@ -498,32 +532,37 @@ es_variable
 Es 1 si la expresión que se va a asignar es algo asimilable a una variable (identificador, o elemento de vector)
 Es 0 en caso contrario (constante u otro tipo de expresión)*/
 
-void operandoEnPilaAArgumento(FILE * fd_asm, int es_variable){
-	lectura_registro(fpasm, es_variable);
-	fprintf(fpasm, "push dword eax\n");
+void asignarDestinoEnPila(FILE* fpasm, int es_variable){
+  	lectura_registro(fpasm, es_variable);
+  	fprintf(fpasm, "pop ebx\n");
+  	fprintf(fpasm, "mov [ebx], eax\n");
 }
+
 /* Como habrás visto en el material, nuestro convenio de llamadas a las funciones asume que
 los argumentos se pasan por valor, esto significa que siempre se dejan en la pila “valores” y
 no “variables”
 Esta función realiza la tarea de dado un operando escrito en la pila y sabiendo si es variable
 o no (es_variable) se deja en la pila el valor correspondiente*/
-
-void llamarFuncion(FILE * fd_asm, char * nombre_funcion, int num_argumentos){
-
+void operandoEnPilaAArgumento(FILE * fpasm, int es_variable){
+  	lectura_registro(fpasm, es_variable);
+  	fprintf(fpasm, "push dword eax\n");
 }
+
 /* Esta función genera código para llamar a la función nombre_funcion asumiendo que los
 argumentos están en la pila en el orden fijado en el material de la asignatura.
 Debe dejar en la cima de la pila el retorno de la función tras haberla limpiado de sus
 argumentos
 Para limpiar la pila puede utilizar la función de nombre limpiarPila*/
-
-void limpiarPila(FILE * fd_asm, int num_argumentos){
-
+void llamarFuncion(FILE * fpasm, char * nombre_funcion, int num_argumentos){
+    fprintf(fpasm, "call _%s\n", nombre_funcion);
+    limpiarPila(fpasm, num_argumentos);
+    fprintf(fpasm, "push dword eax\n");
 }
+
 /* Genera código para limpiar la pila tras invocar una función
 Esta función es necesaria para completar la llamada a métodos, su gestión dificulta el
 conocimiento por parte de la función de llamada del número de argumentos que hay en la
 pila*/
-
-
-
+void limpiarPila(FILE * fpasm, int num_argumentos){
+    fprintf(fpasm, "sub esp, %d\n", num_argumentos*4);
+}
