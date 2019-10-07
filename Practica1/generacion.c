@@ -470,14 +470,14 @@ Según se especifica en el material, es suficiente con utilizar dos registros pa
 tarea.*/
 void escribir_elemento_vector(FILE * fpasm,char * nombre_vector, int tam_max, int exp_es_direccion){
 	lectura_registro(fpasm, exp_es_direccion);
-  /* Comprobamos que el indice esta en el rango adecuado */
-  fprintf(fpasm, "cmp eax, 0\n");
-  fprintf(fpasm, "jl _out_of_range:");
+	/* Comprobamos que el indice esta en el rango adecuado */
+	fprintf(fpasm, "cmp eax, 0\n");
+	fprintf(fpasm, "jl _out_of_range\n");
 	fprintf(fpasm, "cmp eax, %d\n", tam_max);
-	fprintf(fpasm, "jge _out_of_range:");
+	fprintf(fpasm, "jge _out_of_range\n");
 
 	fprintf(fpasm, "lea eax, [_%s + eax*4]\n", nombre_vector);
-  fprintf(fpasm, "push dword eax\n");
+	fprintf(fpasm, "push dword eax\n");
 }
 
 /* Generación de código para iniciar la declaración de una función.
@@ -533,9 +533,8 @@ Es 1 si la expresión que se va a asignar es algo asimilable a una variable (ide
 Es 0 en caso contrario (constante u otro tipo de expresión)*/
 
 void asignarDestinoEnPila(FILE* fpasm, int es_variable){
-  	lectura_registro(fpasm, es_variable);
-  	fprintf(fpasm, "pop ebx\n");
-  	fprintf(fpasm, "mov [ebx], eax\n");
+	/* TODO */
+
 }
 
 /* Como habrás visto en el material, nuestro convenio de llamadas a las funciones asume que
@@ -554,6 +553,7 @@ Debe dejar en la cima de la pila el retorno de la función tras haberla limpiado
 argumentos
 Para limpiar la pila puede utilizar la función de nombre limpiarPila*/
 void llamarFuncion(FILE * fpasm, char * nombre_funcion, int num_argumentos){
+	/* TODO comentar que en un lado se escribe la funcion con _ pero en el otro no*/ 
     fprintf(fpasm, "call _%s\n", nombre_funcion);
     limpiarPila(fpasm, num_argumentos);
     fprintf(fpasm, "push dword eax\n");
