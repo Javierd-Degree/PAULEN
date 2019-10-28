@@ -171,7 +171,6 @@ void multiplicar(FILE* fpasm, int es_variable_1, int es_variable_2){
 
    fprintf(fpasm, "imul ebx\n");
    /* Aunque el resultado se almacene en edx:eax, solo almacenamos eax */
-   /* TODO: ¿Error por overflow ? */
    fprintf(fpasm, "push dword eax\n");
 }
 
@@ -553,7 +552,7 @@ Debe dejar en la cima de la pila el retorno de la función tras haberla limpiado
 argumentos
 Para limpiar la pila puede utilizar la función de nombre limpiarPila*/
 void llamarFuncion(FILE * fpasm, char * nombre_funcion, int num_argumentos){
-	/* TODO comentar que en un lado se escribe la funcion con _ pero en el otro no*/ 
+	/* TODO comentar que en un lado se escribe la funcion con _ pero en el otro no*/
     fprintf(fpasm, "call _%s\n", nombre_funcion);
     limpiarPila(fpasm, num_argumentos);
     fprintf(fpasm, "push dword eax\n");
