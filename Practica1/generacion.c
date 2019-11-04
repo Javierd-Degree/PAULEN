@@ -532,7 +532,14 @@ Es 1 si la expresión que se va a asignar es algo asimilable a una variable (ide
 Es 0 en caso contrario (constante u otro tipo de expresión)*/
 
 void asignarDestinoEnPila(FILE* fpasm, int es_variable){
-	/* TODO */
+	fprintf(fpasm, "pop ebx\n");
+  fprintf(fpasm, "pop eax\n");
+  if(es_variable == 1){
+     /* Hacemos onversion de referencia a valor */
+     fprintf(fpasm, "mov eax, [eax]\n");
+  }
+  fprintf(fpasm, "mov dword [ebx], eax\n");
+
 
 }
 
