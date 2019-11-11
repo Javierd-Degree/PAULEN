@@ -1,10 +1,7 @@
 #include <stdio.h>
 #include "tokens.h"
-#include "lex.yy.c"
 
-extern FILE* yyin;
-extern char* yytext;
-extern int yyleng;
+int yylex();
 
 char *getName(int code){
   switch (code) {
@@ -83,9 +80,16 @@ char *getName(int code){
     case TOK_ERROR:
       return "TOK_ERROR";
   }
+
+  return NULL;
 }
 
 int main(int argc, char *argv[]){
+  extern FILE* yyin;
+  extern char* yytext;
+  extern int yyleng;
+  extern long nline, ncolumn;
+
   FILE *fout;
   int code;
 
@@ -94,33 +98,31 @@ int main(int argc, char *argv[]){
     return -1;
   }
 
-  yyin = fopen(agv[1], "r");
+  yyin = fopen(argv[1], "r");
   if (yyin == NULL) {
     printf("El archivo de entrada no es válido\n");
     return -1;
   }
 
-  fout = fopen(agv[2], "r");
+  fout = fopen(argv[2], "w");
   if (fout == NULL) {
     printf("El archivo de salida no es válido\n");
-    fclose(fin);
+    fclose(yyin);
     return -1;
   }
 
-  do{
-    code = yylex();
-    /* TODO Ver que pasa cuando es un error */
+
+  while((code = yylex())){
     if (code == TOK_ERROR && yyleng > 100){
-      fprintf(stderr, "****Error en [lin %d, col %d]: idenficador demasiado largo\n(%s)", ,yytext);
+      fprintf(stderr, "****Error en [lin %li, col %li]: idenficador demasiado largo(%s)\n", nline, ncolumn ,yytext);
       break;
     }else if(code == TOK_ERROR){
-      fprintf(stderr, "****Error en [lin %d, col %d]: símbolo no permitido (%s)", yytext);
+      fprintf(stderr, "****Error en [lin %li, col %li]: símbolo no permitido (%s)\n", nline, ncolumn, yytext);
       break;
     }
 
     fprintf(fout, "%s\t%d\t%s\n", getName(code), code, yytext);
-
-  }while(code != 0);
+  }
 
   fclose(yyin);
   fclose(fout);

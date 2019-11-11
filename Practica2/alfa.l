@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "tokens.h"
 
-long nline=0, ncolumn=0;
+long nline=1, ncolumn=1;
 %}
 
 %option noyywrap
@@ -32,51 +32,57 @@ mayor ">"
 
 
 %%
-main { return TOK_MAIN; }
-int { return TOK_INT; }
-boolean { return TOK_BOOLEAN; }
-array { return TOK_ARRAY; }
-function { return TOK_FUNCTION; }
-if { return TOK_IF; }
-else { return TOK_ELSE; }
-while { return TOK_WHILE; }
-scanf { return TOK_SCANF; }
-printf { return TOK_PRINTF; }
-return { return TOK_RETURN; }
+\n { nline++; ncolumn=1; }
+" " { ncolumn+=yyleng; }
+\t { ncolumn+=yyleng; }
+"//".* { }
+
+main { ncolumn+=yyleng; return TOK_MAIN; }
+int { ncolumn+=yyleng; return TOK_INT; }
+boolean { ncolumn+=yyleng; return TOK_BOOLEAN; }
+array { ncolumn+=yyleng; return TOK_ARRAY; }
+function { ncolumn+=yyleng; return TOK_FUNCTION; }
+if { ncolumn+=yyleng; return TOK_IF; }
+else { ncolumn+=yyleng; return TOK_ELSE; }
+while { ncolumn+=yyleng; return TOK_WHILE; }
+scanf { ncolumn+=yyleng; return TOK_SCANF; }
+printf { ncolumn+=yyleng; return TOK_PRINTF; }
+return { ncolumn+=yyleng; return TOK_RETURN; }
 
 
-puntoycoma { return TOK_PUNTOYCOMA; }
-coma { return TOK_COMA; }
-parentesisizquierdo { return TOK_PARENTESISIZQUIERDO; }
-parentesisderecho { return TOK_PARENTESISDERECHO; }
-corcheteizquierdo { return TOK_CORCHETEIZQUIERDO; }
-corchetederecho { return TOK_CORCHETEDERECHO; }
-llaveizquierda { return TOK_LLAVEIZQUIERDA; }
-llavederecha { return TOK_LLAVEDERECHA; }
-asignacion { return TOK_ASIGNACION; }
-mas { return TOK_MAS; }
-menos { return TOK_MENOS; }
-division { return TOK_DIVISION; }
-asterisco { return TOK_ASTERISCO; }
-and { return TOK_AND; }
-or { return TOK_OR; }
-not { return TOK_NOT; }
-igual { return TOK_IGUAL; }
-distinto { return TOK_DISTINTO; }
-menorigual { return TOK_MENORIGUAL; }
-mayorigual { return TOK_MAYORIGUAL; }
-menor { return TOK_MENOR; }
-mayor { return TOK_MAYOR; }
+{puntoycoma} { ncolumn+=yyleng; return TOK_PUNTOYCOMA; }
+{coma} { ncolumn+=yyleng; return TOK_COMA; }
+{parentesisizquierdo} { ncolumn+=yyleng; return TOK_PARENTESISIZQUIERDO; }
+{parentesisderecho} { ncolumn+=yyleng; return TOK_PARENTESISDERECHO; }
+{corcheteizquierdo} { ncolumn+=yyleng; return TOK_CORCHETEIZQUIERDO; }
+{corchetederecho} { ncolumn+=yyleng; return TOK_CORCHETEDERECHO; }
+{llaveizquierda} { ncolumn+=yyleng; return TOK_LLAVEIZQUIERDA; }
+{llavederecha} { ncolumn+=yyleng; return TOK_LLAVEDERECHA; }
+{asignacion} { ncolumn+=yyleng; return TOK_ASIGNACION; }
+{mas} { ncolumn+=yyleng; return TOK_MAS; }
+{menos} { ncolumn+=yyleng; return TOK_MENOS; }
+{division} { ncolumn+=yyleng; return TOK_DIVISION; }
+{asterisco} { ncolumn+=yyleng; return TOK_ASTERISCO; }
+{and} { ncolumn+=yyleng; return TOK_AND; }
+{or} { ncolumn+=yyleng; return TOK_OR; }
+{not} { ncolumn+=yyleng; return TOK_NOT; }
+{igual} { ncolumn+=yyleng; return TOK_IGUAL; }
+{distinto} { ncolumn+=yyleng; return TOK_DISTINTO; }
+{menorigual} { ncolumn+=yyleng; return TOK_MENORIGUAL; }
+{mayorigual} { ncolumn+=yyleng; return TOK_MAYORIGUAL; }
+{menor} { ncolumn+=yyleng; return TOK_MENOR; }
+{mayor} { ncolumn+=yyleng; return TOK_MAYOR; }
 
-true { return TOK_TRUE; }
-false { return TOK_FALSE; }
+true { ncolumn+=yyleng; return TOK_TRUE; }
+false { ncolumn+=yyleng; return TOK_FALSE; }
 
-\n { nline++; ncolumn=0; }
+[a-zA-Z][0-9a-zA-Z]{0,99} { ncolumn+=yyleng; return TOK_IDENTIFICADOR; }
+[a-zA-Z][0-9a-zA-Z]{100,} { return TOK_ERROR; }
 
-[a-zA-Z][0-9a-zA-Z]{0,99} { return TOK_IDENTIFICADOR; }
+[0-9]+ { ncolumn+=yyleng; return TOK_CONSTANTE_ENTERA; }
 
-[0-9]+ { return TOK_CONSTANTE_ENTERA; }
 
-[^ \t\n(//.*\n)]+ { return TOK_ERROR; }
+
+. { return TOK_ERROR; }
 
 %%
