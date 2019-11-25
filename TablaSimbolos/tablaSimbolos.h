@@ -18,7 +18,7 @@ void delete_all(entradaTabla** tabla);
 
 tablaSimbolos* crearTablaSimbolos();
 
-void borrarTablaSimbolos(tablaSimbolos* tabla);
+void destruirTablaSimbolos(tablaSimbolos* tabla);
 
 void limpiarAmbitoLocal(tablaSimbolos* tabla);
 

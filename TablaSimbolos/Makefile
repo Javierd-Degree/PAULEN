@@ -1,12 +1,15 @@
 CC = gcc
 CFLAGS = -g -Wall
-LIBS = tablaSimbolos.h uthash.h
+LIBS = uthash.h tablaSimbolos.o
 EJS = prueba_tabla
 ######################################################################################################################################
 
 all: $(EJS)
 
-prueba_tabla:
+tablaSimbolos.o: tablaSimbolos.c tablaSimbolos.h
+	$(CC) -c tablaSimbolos.c
+
+prueba_tabla: tablaSimbolos.o
 	$(CC) $(CFLAGS) main.c $(LIBS) -o main.o
 
 clean:

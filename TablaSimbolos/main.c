@@ -106,7 +106,7 @@ int main(int argc, char* argv[]){
 
   }
 
-  borrarTablaSimbolos(mTablaSimbolos);
+  destruirTablaSimbolos(mTablaSimbolos);
 
   fclose(fn);
   fclose(fout);
