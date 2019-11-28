@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#define MAX_LINE 256
 
 struct _entradaTabla{
   char* key;
@@ -18,11 +19,18 @@ struct _tablaSimbolos{
 
 /****************************************************************************/
 
+entradaTabla* crearEntrada(){
+  entradaTabla* entrada;
+  entrada = (entradaTabla*)malloc(sizeof(entradaTabla));
+  entrada->key = (char*)malloc(sizeof(char)*MAX_LINE);
+  return entrada;
+}
+
 int addValue(entradaTabla** tabla, char* key, int value){
   entradaTabla* entrada;
   HASH_FIND_STR(*tabla, key, entrada);
   if (entrada == NULL) {
-    entrada = (entradaTabla*)malloc(sizeof(entradaTabla));
+    entrada = crearEntrada();
     strcpy(entrada->key, key);
     entrada->value = value;
     HASH_ADD_STR(*tabla, key, entrada);
@@ -33,6 +41,10 @@ int addValue(entradaTabla** tabla, char* key, int value){
 
 entradaTabla* findValue(entradaTabla** tabla, char* key) {
     entradaTabla* value;
+
+    if(tabla == NULL){
+      return NULL;
+    }
 
     HASH_FIND_STR(*tabla, key, value );  /* value: output pointer */
     return value;
@@ -47,6 +59,7 @@ void delete_all(entradaTabla** tabla) {
   entradaTabla *current_item, *tmp;
 
   HASH_ITER(hh, *tabla, current_item, tmp) {
+    free(current_item->key);
     HASH_DEL(*tabla, current_item);  /* delete; tabla advances to next */
     free(current_item);
   }
@@ -57,20 +70,30 @@ void delete_all(entradaTabla** tabla) {
 tablaSimbolos* crearTablaSimbolos(){
   tablaSimbolos* tabla;
   tabla = (tablaSimbolos*)malloc(sizeof(tablaSimbolos));
-  tabla->ambitoLocal = NULL;
-  tabla->ambitoGlobal = NULL;
+  tabla->ambitoLocal = (entradaTabla**)malloc(sizeof(entradaTabla*));
+  *(tabla->ambitoLocal) = NULL;
+  tabla->ambitoGlobal = (entradaTabla**)malloc(sizeof(entradaTabla*));
+  *(tabla->ambitoGlobal) = NULL;
   return tabla;
 }
 
-void destruirTablaSimbolos(tablaSimbolos* tabla){
-  delete_all(tabla->ambitoLocal);
-  delete_all(tabla->ambitoGlobal);
+void borrarTablaSimbolos(tablaSimbolos* tabla){
+  if(tabla->ambitoLocal){
+    delete_all(tabla->ambitoLocal);
+    free(tabla->ambitoLocal);
+  }
+  if(tabla->ambitoGlobal){
+    delete_all(tabla->ambitoGlobal);
+    free(tabla->ambitoGlobal);
+  }
   free(tabla);
 }
 
 void limpiarAmbitoLocal(tablaSimbolos* tabla){
   delete_all(tabla->ambitoLocal);
-  tabla->ambitoLocal = NULL;
+  free(tabla->ambitoLocal);
+  tabla->ambitoLocal = (entradaTabla**)malloc(sizeof(entradaTabla*));
+  *(tabla->ambitoLocal) = NULL;
 }
 
 int buscarAmbitoLocal(tablaSimbolos* tabla, char* key, int* value){

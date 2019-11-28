@@ -32,18 +32,20 @@ int main(int argc, char* argv[]){
   }
 
   mTablaSimbolos = crearTablaSimbolos();
+  line = (char*)malloc(sizeof(char)*MAX_LINE);
   while((read = getline(&line, &len, fn)) != -1){
     identificador = line;
     valor = NULL;
     /* Buscamos el valor (Si lo hay)*/
     for(i = 0; i < len; i++){
-      if(line[i] == '\t'){
+      if(line[i] == '\t' || line[i] == ' '){
         line[i] = '\0';
-        valor = line+1;
+        valor = &line[i+1];
       }
 
       if(line[i] == '\n'){
         line[i] = '\0';
+        break;
       }
     }
 
@@ -69,7 +71,7 @@ int main(int argc, char* argv[]){
       /* Cerramos el ambito local */
       isAmbitoLocal = 0;
       limpiarAmbitoLocal(mTablaSimbolos);
-      fprintf(fout, "cierre");
+      fprintf(fout, "cierre\n");
 
     }else if(valorNum >= 0){
       /* Tenemos que guardar una variable en la has table */
@@ -94,7 +96,7 @@ int main(int argc, char* argv[]){
       tmp = insertarAmbitoGlobal(mTablaSimbolos, identificador, valorNum);
       if (tmp){
         isAmbitoLocal = 1;
-        printf("%s\n", identificador);
+        fprintf(fout, "%s\n", identificador);
         /* Insertamos la función en el ámbito local tambien  */
         tmp = insertarAmbitoLocal(mTablaSimbolos, identificador, valorNum);
       }else{
@@ -106,8 +108,8 @@ int main(int argc, char* argv[]){
 
   }
 
-  destruirTablaSimbolos(mTablaSimbolos);
-
+  borrarTablaSimbolos(mTablaSimbolos);
+  free(line);
   fclose(fn);
   fclose(fout);
 
