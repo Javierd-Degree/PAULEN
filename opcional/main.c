@@ -63,16 +63,14 @@ int main(int argc, char* argv[]){
 
       /* Escribimos en el fichero de salida el resultado de la busqueda */
       if (tmp){
-        printf("Encontrado: %d %d\n", tmp, result);
         fprintf(fout, "%s\t%d\n", identificador, result);
       }else{
-        printf("No encontrado: %d\n", tmp);
         fprintf(fout, "%s\t-1\n", identificador);
       }
     }else if(strcmp(identificador, "cierre") == 0 && valorNum == -999){
       /* Cerramos el ambito local */
       limpiarAmbitoLocal(mTablaSimbolos, localIndex);
-      localIndex--;
+      --localIndex;
       if (localIndex < 0){
         isAmbitoLocal = 0;
         localIndex = 0;
@@ -95,7 +93,7 @@ int main(int argc, char* argv[]){
       }
     }else if(valorNum < -1){
       /* Comienza un nuevo ambito */
-      if (localIndex == 0){
+      if (isAmbitoLocal == 0){
         tmp = insertarAmbitoGlobal(mTablaSimbolos, identificador, valorNum);
         if (tmp){
           fprintf(fout, "%s\n", identificador);

@@ -36,19 +36,16 @@ int addValue(entradaTabla** tabla, char* key, int index, int value){
     HASH_ADD_STR(tabla[index], key, entrada);
     return 1;
   }
-  printf("Encontrado al añadir %s : %d\n", key, entrada->value);
   return 0;
 }
 
 entradaTabla* findValue(entradaTabla** tabla, int index, char* key) {
     entradaTabla* value;
     if(index < 0 || index >= MAX_LOCALS){
-      printf("FIND NULL %d\n", index);
       return NULL;
     }
 
     if(tabla[index] == NULL){
-      printf("FIND tabla NULL %d\n", index);
       return NULL;
     }
 
@@ -125,7 +122,6 @@ int buscarAmbitoLocal(tablaSimbolos* tabla, char* key, int index, int* value){
 
 int buscarAmbitoGlobal(tablaSimbolos* tabla, char* key, int* value){
   entradaTabla* entrada;
-  printf("Buscando en ambito global\n");
   entrada = findValue(tabla->ambitoGlobal, 0, key);
   if(entrada != NULL){
     *value = entrada->value;
