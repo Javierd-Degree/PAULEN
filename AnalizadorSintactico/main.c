@@ -4,17 +4,8 @@
    yydebug = 1;
 #endif
 
-extern long nline, ncolumn;
-extern int yymorph;
-
 int yylex();
 int yyparse();
-
-void yyerror() {
-  if (!yymorph){
-    printf("****Error sintactico en [lin %ld, col %ld]\n", nline, ncolumn);
-  }
-}
 
 int main(int argc, char *argv[]){
   extern FILE *yyin, *out;

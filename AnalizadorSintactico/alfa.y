@@ -3,6 +3,11 @@
   FILE* out;
   int yylex();
   void yyerror(const char *s);
+
+  extern long nline, ncolumn;
+  extern int yymorph;
+  extern int yyleng;
+
 %}
 
 %union
@@ -154,3 +159,9 @@ constante_logica: TOK_TRUE {fprintf(out, ";R102:\t<constante_logica> ::= true\n"
 constante_entera: TOK_CONSTANTE_ENTERA {fprintf(out, ";R104:\t<constante_entera> ::= TOK_CONSTANTE_ENTERA\n");};
 identificador: TOK_IDENTIFICADOR {fprintf(out, ";R108:\t<identificador> ::= TOK_IDENTIFICADOR\n");};
 %%
+
+void yyerror(const char *s) {
+  if (!yymorph){
+    printf("****Error sintactico en [lin %ld, col %ld]\n", nline, ncolumn-yyleng);
+  }
+}
