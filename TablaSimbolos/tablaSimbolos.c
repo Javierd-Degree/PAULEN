@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#define MAX_LINE 256
 
 struct _entradaTabla{
   char* key;
@@ -19,10 +18,10 @@ struct _tablaSimbolos{
 
 /****************************************************************************/
 
-entradaTabla* crearEntrada(){
+entradaTabla* crearEntrada(int len){
   entradaTabla* entrada;
   entrada = (entradaTabla*)malloc(sizeof(entradaTabla));
-  entrada->key = (char*)malloc(sizeof(char)*MAX_LINE);
+  entrada->key = (char*)malloc(sizeof(char)*len);
   return entrada;
 }
 
@@ -30,7 +29,7 @@ int addValue(entradaTabla** tabla, char* key, int value){
   entradaTabla* entrada;
   HASH_FIND_STR(*tabla, key, entrada);
   if (entrada == NULL) {
-    entrada = crearEntrada();
+    entrada = crearEntrada(strlen(key)+1);
     strcpy(entrada->key, key);
     entrada->value = value;
     HASH_ADD_STR(*tabla, key, entrada);
@@ -42,17 +41,12 @@ int addValue(entradaTabla** tabla, char* key, int value){
 entradaTabla* findValue(entradaTabla** tabla, char* key) {
     entradaTabla* value;
 
-    if(tabla == NULL){
+    if(*tabla == NULL){
       return NULL;
     }
 
     HASH_FIND_STR(*tabla, key, value );  /* value: output pointer */
     return value;
-}
-
-void deleteItem(entradaTabla** tabla, entradaTabla* item) {
-    HASH_DEL(*tabla, item);  /* item: pointer to deletee */
-    free(item);
 }
 
 void delete_all(entradaTabla** tabla) {

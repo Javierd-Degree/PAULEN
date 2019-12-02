@@ -11,8 +11,6 @@ int addValue(entradaTabla** tabla, char* key, int value);
 
 entradaTabla* findValue(entradaTabla** tabla, char* key);
 
-void deleteItem(entradaTabla** tabla, entradaTabla* item);
-
 void delete_all(entradaTabla** tabla);
 /***************************************************************************/
 
