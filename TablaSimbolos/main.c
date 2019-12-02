@@ -38,7 +38,7 @@ int main(int argc, char* argv[]){
     valor = NULL;
     /* Buscamos el valor (Si lo hay)*/
     for(i = 0; i < len; i++){
-      if(line[i] == '\t' || line[i] == ' '){
+      if(line[i] == '\t'){
         line[i] = '\0';
         valor = &line[i+1];
       }
