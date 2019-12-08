@@ -11,7 +11,7 @@ int main(int argc, char* argv[]){
   char *line;
   char *identificador, *valor;
   tablaSimbolos* mTablaSimbolos;
-  int valorNum, i, result, tmp ,isAmbitoLocal=0;
+  int valorNum, i, result, tmp ,isAmbitoLocal=0, localIndex = 0;
 
   if (argc < 3){
     printf("No hay suficientes argumentos");
@@ -38,7 +38,7 @@ int main(int argc, char* argv[]){
     valor = NULL;
     /* Buscamos el valor (Si lo hay)*/
     for(i = 0; i < len; i++){
-      if(line[i] == '\t'){
+      if(line[i] == '\t' || line[i] == ' '){
         line[i] = '\0';
         valor = &line[i+1];
       }
@@ -56,7 +56,7 @@ int main(int argc, char* argv[]){
     if (valor == NULL){
       /* Buscamos el identificador en la tabla */
       if(isAmbitoLocal){
-        tmp = buscarAmbitoLocal(mTablaSimbolos, identificador, &result);
+        tmp = buscarAmbitoLocal(mTablaSimbolos, identificador, localIndex, &result);
       }else{
         tmp = buscarAmbitoGlobal(mTablaSimbolos, identificador, &result);
       }
@@ -69,14 +69,18 @@ int main(int argc, char* argv[]){
       }
     }else if(strcmp(identificador, "cierre") == 0 && valorNum == -999){
       /* Cerramos el ambito local */
-      isAmbitoLocal = 0;
-      limpiarAmbitoLocal(mTablaSimbolos);
+      limpiarAmbitoLocal(mTablaSimbolos, localIndex);
+      --localIndex;
+      if (localIndex < 0){
+        isAmbitoLocal = 0;
+        localIndex = 0;
+      }
       fprintf(fout, "cierre\n");
 
     }else if(valorNum >= 0){
       /* Tenemos que guardar una variable en la has table */
       if(isAmbitoLocal){
-        tmp = insertarAmbitoLocal(mTablaSimbolos, identificador, valorNum);
+        tmp = insertarAmbitoLocal(mTablaSimbolos, identificador, localIndex, valorNum);
       }else{
         tmp = insertarAmbitoGlobal(mTablaSimbolos, identificador, valorNum);
       }
@@ -89,18 +93,26 @@ int main(int argc, char* argv[]){
       }
     }else if(valorNum < -1){
       /* Comienza un nuevo ambito */
-      if(isAmbitoLocal){
-        fprintf(fout, "ERROR: No se permiten funciones anidadas\n\t%s\t%s", line, valor);
-      }
-
-      tmp = insertarAmbitoGlobal(mTablaSimbolos, identificador, valorNum);
-      if (tmp){
-        isAmbitoLocal = 1;
-        fprintf(fout, "%s\n", identificador);
-        /* Insertamos la función en el ámbito local tambien  */
-        tmp = insertarAmbitoLocal(mTablaSimbolos, identificador, valorNum);
+      if (isAmbitoLocal == 0){
+        tmp = insertarAmbitoGlobal(mTablaSimbolos, identificador, valorNum);
+        if (tmp){
+          fprintf(fout, "%s\n", identificador);
+          isAmbitoLocal = 1;
+          /* Insertamos la función en el ámbito local tambien  */
+          tmp = insertarAmbitoLocal(mTablaSimbolos, identificador, localIndex, valorNum);
+        }else{
+          fprintf(fout, "-1\t%s\n", identificador);
+        }
       }else{
-        fprintf(fout, "-1\t%s\n", identificador);
+        tmp = insertarAmbitoLocal(mTablaSimbolos, identificador, localIndex, valorNum);
+        if (tmp){
+          fprintf(fout, "%s\n", identificador);
+          localIndex++;
+          /* Insertamos la función en el ámbito local nuevo tambien  */
+          tmp = insertarAmbitoLocal(mTablaSimbolos, identificador, localIndex, valorNum);
+        }else{
+          fprintf(fout, "-1\t%s\n", identificador);
+        }
       }
     }else{
       fprintf(fout, "ERROR: Linea no reconocida\n\t%s\t%s", line, valor);
