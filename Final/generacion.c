@@ -552,7 +552,7 @@ void escribirVariableLocal(FILE* fpasm, int posicion_variable_local){
 }
 
 /* Función para poder asignar a un destino que no es una variable “global” (tipo _x) por
-ejemplo parámetros o variables globales (ya que en ese caso su nombre real de alto nivel, no
+ejemplo parámetros o variables locales (ya que en ese caso su nombre real de alto nivel, no
 se tiene en cuenta pues es realmente un desplazamiento a partir de ebp: ebp+4 o ebp-8 por
 ejemplo.
 Se debe asumir que en la pila estará
