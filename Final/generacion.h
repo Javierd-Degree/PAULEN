@@ -53,7 +53,7 @@ void escribir_fin(FILE* fpasm);
          ·Salir del programa (ret).
 */
 
-void escribir_operando(FILE* fpasm, char* nombre, int es_variable);
+void escribir_operando(FILE* fpasm, void* nombre, int es_variable);
 /*
    Función que debe ser invocada cuando se sabe un operando de una operación aritmético-lógica y se necesita introducirlo en la pila.
 -	nombre es la cadena de caracteres del operando tal y como debería aparecer en el fuente NASM
@@ -175,7 +175,7 @@ void while_inicio(FILE * fpasm, int etiqueta);
 de control del bucle
 Sólo necesita usar la etiqueta adecuada, por lo que sólo se necesita que se recupere el valor
 de la etiqueta que corresponde al momento actual.
-/* exp_es_variable
+  exp_es_variable
 Es 1 si la expresión de la condición es algo asimilable a una variable (identificador,
 o elemento de vector)
 Es 0 en caso contrario (constante u otro tipo de expresión)*/

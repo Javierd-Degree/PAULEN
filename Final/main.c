@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include "alfa.h"
+
 #if YYDEBUG == 1
    extern yydebug;
    yydebug = 1;
@@ -9,6 +11,8 @@ int yyparse();
 
 int main(int argc, char *argv[]){
   extern FILE *yyin, *out;
+  extern tablaSimbolos *tabla;
+  int result;
 
   if (argc < 3){
     printf("No hay suficientes argumentos\n");
@@ -28,11 +32,17 @@ int main(int argc, char *argv[]){
     return -1;
   }
 
-  yyparse();
-  
+  tabla = crearTablaSimbolos();
+
+  result = yyparse();
+  if (result == -1){
+    printf("Compilación fallida.\n", );
+  }
+
 
   fclose(yyin);
   fclose(out);
+  borrarTablaSimbolos(tabla);
 
   return 0;
 }

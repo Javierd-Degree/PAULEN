@@ -4,10 +4,6 @@
 #define MAX_LONG_ID 100
 #define MAX_TAMANIO_VECTOR 64 
 
-#include "tablaSimbolos.h"
-
-tablaSimbolos* tabla;
-
 /* Categoría de un símbolo: variable, parámetro de función o función */
 typedef enum { VARIABLE, PARAMETRO, FUNCION } CATEGORIA_SIMBOLO;
 

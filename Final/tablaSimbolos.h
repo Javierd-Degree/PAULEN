@@ -2,9 +2,20 @@
 #define TABLASIMBOLOS_H
 
 #include "alfa.h"
+#include "uthash.h"
 
+struct _entradaTabla{
+  char* key;
+  SIMBOLO* value;
+  UT_hash_handle hh;
+};
 typedef struct _entradaTabla entradaTabla;
 
+struct _tablaSimbolos{
+  entradaTabla** ambitoLocal;
+  entradaTabla** ambitoGlobal;
+  int isAmbitoLocal;
+};
 typedef struct _tablaSimbolos tablaSimbolos;
 
 int getLocal(tablaSimbolos* tabla);

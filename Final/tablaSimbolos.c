@@ -1,26 +1,12 @@
-
-#include "uthash.h"
-#include "tablaSimbolos.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-struct _entradaTabla{
-  char* key;
-  SIMBOLO* value;
-  UT_hash_handle hh;
-};
-
-struct _tablaSimbolos{
-  entradaTabla** ambitoLocal;
-  entradaTabla** ambitoGlobal;
-  int isAmbitoLocal;
-};
-
-
+#include "uthash.h"
+#include "tablaSimbolos.h"
 
 int getLocal(tablaSimbolos* tabla){
-  return tabla.isAmbitoLocal;
+  return tabla->isAmbitoLocal;
 }
 /****************************************************************************/
 
@@ -93,22 +79,15 @@ void borrarTablaSimbolos(tablaSimbolos* tabla){
 }
 
 void iniciarAmbitoLocal(tablaSimbolos* tabla){
-  tabla.isAmbitoLocal = 1;
+  tabla->isAmbitoLocal = 1;
 }
 
 void limpiarAmbitoLocal(tablaSimbolos* tabla){
-  tabla.isAmbitoLocal = 0;
+  tabla->isAmbitoLocal = 0;
   delete_all(tabla->ambitoLocal);
   free(tabla->ambitoLocal);
   tabla->ambitoLocal = (entradaTabla**)malloc(sizeof(entradaTabla*));
   *(tabla->ambitoLocal) = NULL;
-}
-
-int buscar(tablaSimbolos* tabla, char* key, SIMBOLO** value){
-  if(tabla.isAmbitoLocal = 0){
-    return buscarAmbitoGlobal(tabla, key, value);
-  }
-  return buscarAmbitoLocal(tabla, key, value);
 }
 
 int buscarAmbitoLocal(tablaSimbolos* tabla, char* key, SIMBOLO** value){
@@ -136,11 +115,11 @@ int buscarAmbitoGlobal(tablaSimbolos* tabla, char* key, SIMBOLO** value){
   return 0;
 }
 
-int insertar(tablaSimbolos* tabla, char* key, SIMBOLO* value){
-  if(tabla.isAmbitoLocal = 0){
-    return insertarAmbitoGlobal(tabla, key, value);
+int buscar(tablaSimbolos* tabla, char* key, SIMBOLO** value){
+  if(tabla->isAmbitoLocal == 0){
+    return buscarAmbitoGlobal(tabla, key, value);
   }
-  return insertarAmbitoLocal(tabla, key, value);
+  return buscarAmbitoLocal(tabla, key, value);
 }
 
 int insertarAmbitoLocal(tablaSimbolos* tabla, char* key, SIMBOLO* value){
@@ -149,4 +128,11 @@ int insertarAmbitoLocal(tablaSimbolos* tabla, char* key, SIMBOLO* value){
 
 int insertarAmbitoGlobal(tablaSimbolos* tabla, char* key, SIMBOLO* value){
   return addValue(tabla->ambitoGlobal, key, value);
+}
+
+int insertar(tablaSimbolos* tabla, char* key, SIMBOLO* value){
+  if(tabla->isAmbitoLocal == 0){
+    return insertarAmbitoGlobal(tabla, key, value);
+  }
+  return insertarAmbitoLocal(tabla, key, value);
 }

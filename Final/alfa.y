@@ -1,10 +1,12 @@
 %{
 	#include <stdio.h>
+	#include "tablaSimbolos.h"
 	#include "alfa.h"
-   #include "generacion.h"
+  #include "generacion.h"
 
    FILE* out;
-   TIPO tipo_actual;
+	 tablaSimbolos *tabla;
+   TIPO tipo_actual, tipo_ret;
    CATEGORIA clase_actual;
    CATEGORIA_SIMBOLO cat_simbolo;
    int tamanio_vector_actual;
@@ -69,13 +71,12 @@
 %token TOK_MENOR
 %token TOK_MAYOR
 
-%token TOK_TRUE
-%token TOK_FALSE
-
 %token TOK_ERROR
 
 %token<atributos> TOK_IDENTIFICADOR
 %token<atributos> TOK_CONSTANTE_ENTERA
+%token<atributos> TOK_TRUE
+%token<atributos> TOK_FALSE
 
 %left TOK_MAS TOK_MENOS TOK_OR
 %left TOK_ASTERISCO TOK_DIVISION TOK_AND
@@ -84,20 +85,38 @@
 
 %type <atributos> exp
 %type <atributos> comparacion
+%type <atributos> clase_vector
+%type <atributos> funcion
+%type <atributos> fn_declaration
+%type <atributos> fn_name
+%type <atributos> asignacion
+%type <atributos> elemento_vector
+%type <atributos> ifthen
+%type <atributos> if_check
+%type <atributos> ifthenelse
+%type <atributos> if_else_sentencias
+%type <atributos> if_else_check
+%type <atributos> bucle
+%type <atributos> while_check
+%type <atributos> inicio_while
+%type <atributos> constante
+%type <atributos> idf_llamada_funcion
+%type <atributos> constante_logica
+%type <atributos> constante_entera
 
 %%
 
 programa: TOK_MAIN TOK_LLAVEIZQUIERDA declaraciones data_segment funciones main_segment sentencias TOK_LLAVEDERECHA {
-   escribir_fin(fpasm);
+   escribir_fin(out);
 };
 
 data_segment: {
-   escribir_cabecera_bss(fpasm, tabla);
-   esvribir_segmento_codigo(fpasm);
+   escribir_cabecera_bss(out, tabla);
+   escribir_segmento_codigo(out);
 }
 
 main_segment: {
-   escribir_inicio_main(fpasm);
+   escribir_inicio_main(out);
 }
 
 declaraciones: declaracion {
@@ -139,12 +158,12 @@ funciones: funcion funciones {
 };
 
 funcion: fn_declaration sentencias TOK_LLAVEDERECHA {
-   void limpiarAmbitoLocal(tabla);
+   limpiarAmbitoLocal(tabla);
    SIMBOLO* simbolo;
    buscar(tabla, $1.lexema, &simbolo);
-   simbolo.info1 = num_parametros;
-   simbolo.info2 = num_var_locales;
-   if(ret = 0){
+   simbolo->info1 = num_parametros;
+   simbolo->info2 = num_var_locales;
+   if(ret == 0){
       printf("****Error semantico en lin %d: Funcion %s sin sentencia de retorno.", nline, $1.lexema);
       return -1;
    }
@@ -153,23 +172,23 @@ funcion: fn_declaration sentencias TOK_LLAVEDERECHA {
 fn_declaration: fn_name TOK_PARENTESISIZQUIERDO parametros_funcion TOK_PARENTESISDERECHO TOK_LLAVEIZQUIERDA declaraciones_funcion {
    SIMBOLO* simbolo;
    buscar(tabla, $1.lexema, &simbolo);
-   simbolo.info1 = num_parametros;
-   simbolo.info2 = num_var_locales;
+   simbolo->info1 = num_parametros;
+   simbolo->info2 = num_var_locales;
    strcpy($$.lexema, $1.lexema);
    ret = 0;
-   declararFuncion(fpasm, $1.lexema, num_var_locales);
+   declararFuncion(out, $1.lexema, num_var_locales);
 }
 
 fn_name: TOK_FUNCTION tipo TOK_IDENTIFICADOR {
-   
-   SIMBOLO* simbolo, simbolo_copia;
+
+   SIMBOLO* simbolo, *simbolo_copia;
    simbolo = (SIMBOLO*)malloc(sizeof(SIMBOLO));
-   strcpy(simbolo.identificador, $3.lexema);
-   simbolo.cat_simbolo=FUNCION;
-   simbolo.tipo=tipo_actual;
-   simbolo.categoria=ESCALAR;
-   simbolo.info1=0;
-   simbolo.info2=0;
+   strcpy(simbolo->identificador, $3.lexema);
+   simbolo->cat_simbolo=FUNCION;
+   simbolo->tipo=tipo_actual;
+   simbolo->categoria=ESCALAR;
+   simbolo->info1=0;
+   simbolo->info2=0;
    if(insertar(tabla, $3.lexema, simbolo) == 0){
       printf("****Error semantico en lin %d: Declaracion duplicada.", nline);
       return -1;
@@ -184,7 +203,7 @@ fn_name: TOK_FUNCTION tipo TOK_IDENTIFICADOR {
    simbolo_copia.info2=0;
    insertar(tabla, $3.lexema, simbolo_copia);
    pos_variable_local_actual = 1;
-   pos_parametros = 0;
+   pos_parametro = 0;
    num_var_locales = 0;
    num_parametros = 0;
    strcpy($$.lexema, $3.lexema);
@@ -201,7 +220,7 @@ resto_parametros_funcion:TOK_PUNTOYCOMA parametro_funcion resto_parametros_funci
 
 parametro_funcion: tipo idpf {
    pos_variable_local_actual++;
-   params ++;
+   num_parametros ++;
 };
 
 declaraciones_funcion: declaraciones {
@@ -232,32 +251,32 @@ asignacion: TOK_IDENTIFICADOR TOK_ASIGNACION exp {
       printf("****Error semantico en lin %d: Acceso a variable no declarada %s.", nline, $1.lexema);
       return -1;
    }
-   if(simbolo.cat_simbolo == FUNCION){
+   if(simbolo->cat_simbolo == FUNCION){
       printf("****Error semantico en lin %d: Asignacion incompatible.", nline);
       return -1;
    }
-   if(simbolo.categoria == VECTOR){
+   if(simbolo->categoria == VECTOR){
       printf("****Error semantico en lin %d: Asignacion incompatible.", nline);
       return -1;
    }
-   if(simbolo.tipo != $3.tipo){
+   if(simbolo->tipo != $3.tipo){
       printf("****Error semantico en lin %d: Asignacion incompatible.", nline);
       return -1;
    }
    if(en_funcion == 1){
-      escribirVariableLocal(fpasm, simbolo->info2);
-      asignarDestinoEnPila(fpasm, $3.es_direccion);
+      escribirVariableLocal(out, simbolo->info2);
+      asignarDestinoEnPila(out, $3.es_direccion);
    }else{
-      asignar(fpasm, $1.lexema, $3.es_direccion);
+      asignar(out, $1.lexema, $3.es_direccion);
    }
 } | elemento_vector TOK_ASIGNACION exp {
    if($1.tipo != $3.tipo){
       printf("****Error semantico en lin %d: Asignacion incompatible.", nline);
       return -1;
    }
-   escribir_operando(fpasm, $1.valor, 0);
-   escribir_elemento_vector(fpasm, $1.lexema, simbolo->info1, $3.es_direccion);
-   asignarDestinoEnPila(fpasm, $3.es_direccion);
+   escribir_operando(out, $1.valor_entero, 0);
+   escribir_elemento_vector(out, $1.lexema, tamanio_vector_actual, $3.es_direccion);
+   asignarDestinoEnPila(out, $3.es_direccion);
 };
 
 elemento_vector: TOK_IDENTIFICADOR TOK_CORCHETEIZQUIERDO exp TOK_CORCHETEDERECHO {
@@ -266,7 +285,7 @@ elemento_vector: TOK_IDENTIFICADOR TOK_CORCHETEIZQUIERDO exp TOK_CORCHETEDERECHO
       printf("****Error semantico en lin %d: Acceso a variable no declarada %s.", nline, $1.lexema);
       return -1;
    }
-   if(simbolo.categoria != VECTOR){
+   if(simbolo->categoria != VECTOR){
       printf("****Error semantico en lin %d: Intento de indexacion de una variable que no es de tipo vector.", nline);
       return -1;
    }
@@ -274,10 +293,10 @@ elemento_vector: TOK_IDENTIFICADOR TOK_CORCHETEIZQUIERDO exp TOK_CORCHETEDERECHO
       printf("****Error semantico en lin %d: El indice en una operacion de indexacion tiene que ser de tipo entero.", nline);
       return -1;
    }
-   $$.tipo = simbolo.tipo;
+   $$.tipo = simbolo->tipo;
    $$.es_direccion = 1;
    $$.valor_entero = $3.valor_entero;
-   escribir_elemento_vector(fpasm, $1.lexema, simbolo->info1 , $3.es_direccion);
+   escribir_elemento_vector(out, $1.lexema, simbolo->info1 , $3.es_direccion);
 };
 
 condicional: ifthen{
@@ -285,8 +304,8 @@ condicional: ifthen{
 }
 
 ifthen: if_check TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA {
-   ifthen_fin(fpasm, $1.etiqueta)
-} 
+   ifthen_fin(out, $1.etiqueta)
+}
 
 if_check: TOK_IF TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO {
    if($3.tipo != BOOLEANO){
@@ -294,16 +313,16 @@ if_check: TOK_IF TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO {
       return -1;
    }
    $$.etiqueta = etiqueta++;
-   ifthen_inicio(fpasm, $3.es_direccion, $$.etiqueta);
+   ifthen_inicio(out, $3.es_direccion, $$.etiqueta);
 }
 
 ifthenelse: if_else_sentencias TOK_ELSE TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA {
-   ifthenelse_fin(fpasm, $1.etiqueta)
+   ifthenelse_fin(out, $1.etiqueta)
 };
 
 if_else_sentencias: if_else_check TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA {
    $$.etiqueta = $1.etiqueta;
-   ifthenelse_fin_then(fpasm, $1.etiqueta);
+   ifthenelse_fin_then(out, $1.etiqueta);
 }
 
 
@@ -313,11 +332,11 @@ if_else_check: TOK_IF TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO {
       return -1;
    }
    $$.etiqueta = etiqueta++;
-   ifthenelse_inicio(fpasm, $3.es_direccion, $$.etiqueta);
+   ifthenelse_inicio(out, $3.es_direccion, $$.etiqueta);
 }
 
 bucle: while_check TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA {
-   while_fin(fpasm, $1.etiqueta);
+   while_fin(out, $1.etiqueta);
 };
 
 while_check: inicio_while TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO {
@@ -326,12 +345,12 @@ while_check: inicio_while TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO {
       return -1;
    }
    $$.etiqueta = $1.etiqueta;
-   while_exp_pila (fpasm, $3.es_direccion, $1.etiqueta);
+   while_exp_pila (out, $3.es_direccion, $1.etiqueta);
 }
 
 inicio_while: TOK_WHILE {
    $$.etiqueta = etiqueta++;
-   while_inicio(fpasm, $$.etiqueta);
+   while_inicio(out, $$.etiqueta);
 }
 
 lectura: TOK_SCANF TOK_IDENTIFICADOR {
@@ -341,15 +360,15 @@ lectura: TOK_SCANF TOK_IDENTIFICADOR {
       return -1;
    }
 
-   if(simbolo.categoria != ESCALAR){
+   if(simbolo->categoria != ESCALAR){
       printf("****Error semantico en lin %d: Asignacion incompatible.", nline);
       return -1;
    }
-   leer(fpasm, $2.lexema, simbolo.tipo);
+   leer(out, $2.lexema, simbolo->tipo);
 };
 
 escritura: TOK_PRINTF exp {
-   escribir(fpasm, $2.es_direccion, $.tipo);
+   escribir(out, $2.es_direccion, $2.tipo);
 };
 
 retorno_funcion: TOK_RETURN exp {
@@ -358,7 +377,7 @@ retorno_funcion: TOK_RETURN exp {
       printf("****Error semantico en lin %d: Tipo de retorno de la funcion incorrecto.", nline);
       return -1;
    }
-   retornarFuncion(fpasm, $2.es_direccion);
+   retornarFuncion(out, $2.es_direccion);
 };
 
 exp: exp TOK_MAS exp {
@@ -368,7 +387,7 @@ exp: exp TOK_MAS exp {
    }
    $$.tipo = ENTERO;
    $$.es_direccion = 0;
-   sumar(fpasm, $1.es_direccion, $3.es_direccion);
+   sumar(out, $1.es_direccion, $3.es_direccion);
 } | exp TOK_MENOS exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
       printf("****Error semantico en lin %d: Operacion aritmetica con operandos boolean.", nline);
@@ -376,7 +395,7 @@ exp: exp TOK_MAS exp {
    }
    $$.tipo = ENTERO;
    $$.es_direccion = 0;
-   restar(fpasm, $1.es_direccion, $3.es_direccion);
+   restar(out, $1.es_direccion, $3.es_direccion);
 } | exp TOK_DIVISION exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
       printf("****Error semantico en lin %d: Operacion aritmetica con operandos boolean.", nline);
@@ -384,7 +403,7 @@ exp: exp TOK_MAS exp {
    }
    $$.tipo = ENTERO;
    $$.es_direccion = 0;
-   dividir(fpasm, $1.es_direccion, $3.es_direccion);
+   dividir(out, $1.es_direccion, $3.es_direccion);
 } | exp TOK_ASTERISCO exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
       printf("****Error semantico en lin %d: Operacion aritmetica con operandos boolean.", nline);
@@ -392,7 +411,7 @@ exp: exp TOK_MAS exp {
    }
    $$.tipo = ENTERO;
    $$.es_direccion = 0;
-   multiplicar(fpasm, $1.es_direccion, $3.es_direccion);
+   multiplicar(out, $1.es_direccion, $3.es_direccion);
 } | TOK_MENOS exp {
    if($2.tipo != ENTERO){
       printf("****Error semantico en lin %d: Operacion aritmetica con operandos boolean.", nline);
@@ -400,7 +419,7 @@ exp: exp TOK_MAS exp {
    }
    $$.tipo = ENTERO;
    $$.es_direccion = 0;
-   cambiar_signo(fpasm, $2.es_direccion);
+   cambiar_signo(out, $2.es_direccion);
 } | exp TOK_AND exp {
    if($1.tipo != BOOLEANO || $3.tipo != BOOLEANO){
       printf("****Error semantico en lin %d: Operacion logica con operandos int.", nline);
@@ -408,7 +427,7 @@ exp: exp TOK_MAS exp {
    }
    $$.tipo = BOOLEANO;
    $$.es_direccion = 0;
-   y(fpasm, $1.es_direccion, $3.es_direccion);
+   y(out, $1.es_direccion, $3.es_direccion);
 } | exp TOK_OR exp {
    if($1.tipo != BOOLEANO || $3.tipo != BOOLEANO){
       printf("****Error semantico en lin %d: Operacion logica con operandos int.", nline);
@@ -416,7 +435,7 @@ exp: exp TOK_MAS exp {
    }
    $$.tipo = BOOLEANO;
    $$.es_direccion = 0;
-   o(fpasm, $1.es_direccion, $3.es_direccion);
+   o(out, $1.es_direccion, $3.es_direccion);
 } | TOK_NOT exp {
    if($2.tipo != BOOLEANO){
       printf("****Error semantico en lin %d: Operacion logica con operandos int.", nline);
@@ -424,33 +443,33 @@ exp: exp TOK_MAS exp {
    }
    $$.tipo = BOOLEANO;
    $$.es_direccion = 0;
-   no(fpasm, $2.es_direccion, etiqueta);
+   no(out, $2.es_direccion, etiqueta);
    etiqueta ++;
 } | TOK_IDENTIFICADOR {
    SIMBOLO* simbolo;
    if(buscar(tabla, $1.lexema, &simbolo) == 0){
-      printf("****Error semantico en lin %d: Acceso a variable no declarada %s.", nline, $2.lexema);
+      printf("****Error semantico en lin %d: Acceso a variable no declarada %s.", nline, $1.lexema);
       return -1;
    }
-   if(simbolo.cat_simbolo == FUNCION){
+   if(simbolo->cat_simbolo == FUNCION){
       printf("****Error semantico en lin %d: Numero incorrecto de parametros en llamada a funcion.", nline);
       return -1;
    }
-   if(simbolo.categoria == VECTOR){
+   if(simbolo->categoria == VECTOR){
       printf("****Error semantico en lin %d: No se puede usar un vector sin indexar.", nline);
       return -1;
    }
-   $$.tipo = simbolo.tipo;
+   $$.tipo = simbolo->tipo;
    $$.es_direccion = 1;
    if(simbolo->cat_simbolo == PARAMETRO){
-      escribirParametro(fpasm, simbolo->info2, num_parametros);
-      operandoEnPilaAArgumento(fpasm, 1);
+      escribirParametro(out, simbolo->info2, num_parametros);
+      operandoEnPilaAArgumento(out, 1);
    }else if(simbolo->cat_simbolo == VARIABLE){
       if(en_funcion != 0){
-         escribirVariableLocal(fpasm, simbolo->info2);
-         operandoEnPilaAArgumento(fpasm, 1);
+         escribirVariableLocal(out, simbolo->info2);
+         operandoEnPilaAArgumento(out, 1);
       }else{
-         escribir_operando(fpasm, simbolo->identificador, 1);
+         escribir_operando(out, simbolo->identificador, 1);
       }
    }
 } | constante {
@@ -466,29 +485,29 @@ exp: exp TOK_MAS exp {
    $$.tipo = $1.tipo;
    $$.es_direccion = $1.es_direccion;
    if(en_funcion != 0){
-      operandoEnPilaAArgumento(fpasm, 1);
+      operandoEnPilaAArgumento(out, 1);
    }
 } | idf_llamada_funcion TOK_PARENTESISIZQUIERDO lista_expresiones TOK_PARENTESISDERECHO {
    SIMBOLO* simbolo;
    buscar(tabla, $1.lexema, &simbolo);
-   if(simbolo.info1 != num_parametros){
+   if(simbolo->info1 != num_parametros){
       printf("****Error semantico en lin %d: Numero incorrecto de parametros en llamada a funcion.", nline);
       return -1;
    }
-   llamarFuncion(fpasm, $1.lexema, simbolo.info1);
+   llamarFuncion(out, $1.lexema, simbolo->info1);
    en_funcion = 0;
-   $$.tipo = simbolo.tipo;
+   $$.tipo = simbolo->tipo;
    $$.es_direccion = 0;
 };
 
 idf_llamada_funcion: TOK_IDENTIFICADOR {
    SIMBOLO* simbolo;
    if(buscar(tabla, $1.lexema, &simbolo) == 0){
-      printf("****Error semantico en lin %d: Acceso a variable no declarada %s.", nline, $2.lexema);
+      printf("****Error semantico en lin %d: Acceso a variable no declarada %s.", nline, $1.lexema);
       return -1;
    }
-   if(simbolo.cat_simbolo != FUNCION){
-      printf("****Error semantico en lin %d: %s no es una funcion.", nline, simbolo.identificador);
+   if(simbolo->cat_simbolo != FUNCION){
+      printf("****Error semantico en lin %d: %s no es una funcion.", nline, simbolo->identificador);
       return -1;
    }
    if(en_funcion != 0){
@@ -497,7 +516,7 @@ idf_llamada_funcion: TOK_IDENTIFICADOR {
    }
    num_parametros = 0;
    en_funcion = 1;
-   strcpy($$.lexema, simbolo.identificador);
+   strcpy($$.lexema, simbolo->identificador);
 }
 
 lista_expresiones: exp resto_lista_expresiones {
@@ -517,7 +536,7 @@ comparacion: exp TOK_IGUAL exp {
    }
    $$.tipo = BOOLEANO;
    $$.es_direccion = 0;
-   igual(fpasm, $1.es_direccion, $3.es_direccion, etiqueta);
+   igual(out, $1.es_direccion, $3.es_direccion, etiqueta);
    etiqueta ++;
 } | exp TOK_DISTINTO exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
@@ -526,7 +545,7 @@ comparacion: exp TOK_IGUAL exp {
    }
    $$.tipo = BOOLEANO;
    $$.es_direccion = 0;
-   distinto(fpasm, $1.es_direccion, $3.es_direccion, etiqueta);
+   distinto(out, $1.es_direccion, $3.es_direccion, etiqueta);
    etiqueta ++;
 } | exp TOK_MENORIGUAL exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
@@ -535,7 +554,7 @@ comparacion: exp TOK_IGUAL exp {
    }
    $$.tipo = BOOLEANO;
    $$.es_direccion = 0;
-   menor_igual(fpasm, $1.es_direccion, $3.es_direccion, etiqueta);
+   menor_igual(out, $1.es_direccion, $3.es_direccion, etiqueta);
    etiqueta ++;
 } | exp TOK_MAYORIGUAL exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
@@ -544,7 +563,7 @@ comparacion: exp TOK_IGUAL exp {
    }
    $$.tipo = BOOLEANO;
    $$.es_direccion = 0;
-   mayor_igual(fpasm, $1.es_direccion, $3.es_direccion, etiqueta);
+   mayor_igual(out, $1.es_direccion, $3.es_direccion, etiqueta);
    etiqueta ++;
 } | exp TOK_MENOR exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
@@ -553,7 +572,7 @@ comparacion: exp TOK_IGUAL exp {
    }
    $$.tipo = BOOLEANO;
    $$.es_direccion = 0;
-   menor(fpasm, $1.es_direccion, $3.es_direccion, etiqueta);
+   menor(out, $1.es_direccion, $3.es_direccion, etiqueta);
    etiqueta ++;
 } | exp TOK_MAYOR exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
@@ -562,7 +581,7 @@ comparacion: exp TOK_IGUAL exp {
    }
    $$.tipo = BOOLEANO;
    $$.es_direccion = 0;
-   mayor(fpasm, $1.es_direccion, $3.es_direccion, etiqueta);
+   mayor(out, $1.es_direccion, $3.es_direccion, etiqueta);
    etiqueta ++;
 };
 
@@ -577,18 +596,18 @@ constante: constante_entera {
 constante_logica: TOK_TRUE {
    $$.tipo = BOOLEANO;
    $$.es_direccion = 0;
-   escribir_operando(fpasm, &($1.valor_entero), 0);
+   escribir_operando(out, &($1.valor_entero), 0);
 } | TOK_FALSE {
    $$.tipo = BOOLEANO;
    $$.es_direccion = 0;
-   escribir_operando(fpasm, &($1.valor_entero), 0);
+   escribir_operando(out, &($1.valor_entero), 0);
 };
 
 
 constante_entera: TOK_CONSTANTE_ENTERA {
    $$.tipo = ENTERO;
    $$.es_direccion = 0;
-   escribir_operando(fpasm, &($1.valor_entero), 0);
+   escribir_operando(out, &($1.valor_entero), 0);
 };
 
 identificador: TOK_IDENTIFICADOR {
@@ -609,16 +628,16 @@ identificador: TOK_IDENTIFICADOR {
 
    SIMBOLO* simbolo;
    simbolo = (SIMBOLO*)malloc(sizeof(SIMBOLO));
-   strcpy(simbolo.identificador, $1.lexema);
-   simbolo.cat_simbolo=VARIABLE;
-   simbolo.tipo=tipo_actual
-   simbolo.categoria=clase_actual;
+   strcpy(simbolo->identificador, $1.lexema);
+   simbolo->cat_simbolo=VARIABLE;
+   simbolo->tipo=tipo_actual
+   simbolo->categoria=clase_actual;
    if(clase_actual == ESCALAR){
-      simbolo.info1=$1.valor;
+      simbolo->info1=$1.valor;
    } else{
-      simbolo.info1=tamanio_vector_actual;
+      simbolo->info1=tamanio_vector_actual;
    }
-   simbolo.info2=pos_variable_local_actual;
+   simbolo->info2=pos_variable_local_actual;
    if(insertar(tabla, $1.lexema, simbolo) == 0){
       printf("****Error semantico en lin %d: Declaracion duplicada.", nline);
       return -1;
@@ -628,17 +647,17 @@ identificador: TOK_IDENTIFICADOR {
 idpf: TOK_IDENTIFICADOR {
    SIMBOLO* simbolo;
    simbolo = (SIMBOLO*)malloc(sizeof(SIMBOLO));
-   strcpy(simbolo.identificador, $1.lexema);
-   simbolo.cat_simbolo=PARAMETRO;
-   simbolo.tipo=tipo_actual;
-   simbolo.categoria=clase_actual;
+   strcpy(simbolo->identificador, $1.lexema);
+   simbolo->cat_simbolo=PARAMETRO;
+   simbolo->tipo=tipo_actual;
+   simbolo->categoria=clase_actual;
    if(clase_actual == ESCALAR){
-      simbolo.info1=0;
+      simbolo->info1=0;
    } else{
-      simbolo.info1=tamanio_vector_actual;
+      simbolo->info1=tamanio_vector_actual;
    }
 
-   simbolo.info2=pos_parametro;
+   simbolo->info2=pos_parametro;
    if(insertar(tabla, $1.lexema, simbolo) == 0){
       printf("****Error semantico en lin %d: Declaracion duplicada.", nline);
       return -1;

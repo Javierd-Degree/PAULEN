@@ -132,7 +132,7 @@ void asignar(FILE* fpasm, char* nombre, int es_variable){
 void asignar_vector(FILE* fpasm, int es_variable){
   /*sacamos el elemento superior de la pila*/
   fprintf(fpasm, "pop eax\n");
-  /*Sacamos la dirección del vector ya indexado de la pila*/.
+  /*Sacamos la dirección del vector ya indexado de la pila*/
   fprintf(fpasm, "pop ebx\n");
   /*Si es una variable, guardamos en la variable nombre el contenido de la referencia sacada de la pila*/
   if(es_variable==1){
@@ -469,7 +469,7 @@ void while_inicio(FILE * fpasm, int etiqueta){
 de control del bucle
 Sólo necesita usar la etiqueta adecuada, por lo que sólo se necesita que se recupere el valor
 de la etiqueta que corresponde al momento actual.
-/* exp_es_variable
+  exp_es_variable
 Es 1 si la expresión de la condición es algo asimilable a una variable (identificador,
 o elemento de vector)
 Es 0 en caso contrario (constante u otro tipo de expresión)*/
