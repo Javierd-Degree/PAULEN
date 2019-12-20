@@ -95,7 +95,6 @@
 %type <atributos> if_check
 %type <atributos> ifthenelse
 %type <atributos> if_else_sentencias
-%type <atributos> if_else_check
 %type <atributos> bucle
 %type <atributos> while_check
 %type <atributos> inicio_while
@@ -138,7 +137,7 @@ clase_escalar: tipo {
 clase_vector: TOK_ARRAY tipo TOK_CORCHETEIZQUIERDO constante_entera TOK_CORCHETEDERECHO {
    tamanio_vector_actual = $4.valor_entero;
    if(tamanio_vector_actual < 1 || tamanio_vector_actual > 64){
-      printf("****Error semantico en lin %d: El tamanyo del vector excede los limites permitidos (1,64).", nline);
+      printf("****Error semantico en lin %ld: El tamanyo del vector excede los limites permitidos (1,64).", nline);
       return -1;
    }
 };
@@ -164,7 +163,7 @@ funcion: fn_declaration sentencias TOK_LLAVEDERECHA {
    simbolo->info1 = num_parametros;
    simbolo->info2 = num_var_locales;
    if(ret == 0){
-      printf("****Error semantico en lin %d: Funcion %s sin sentencia de retorno.", nline, $1.lexema);
+      printf("****Error semantico en lin %ld: Funcion %s sin sentencia de retorno.", nline, $1.lexema);
       return -1;
    }
 };
@@ -190,17 +189,17 @@ fn_name: TOK_FUNCTION tipo TOK_IDENTIFICADOR {
    simbolo->info1=0;
    simbolo->info2=0;
    if(insertar(tabla, $3.lexema, simbolo) == 0){
-      printf("****Error semantico en lin %d: Declaracion duplicada.", nline);
+      printf("****Error semantico en lin %ld: Declaracion duplicada.", nline);
       return -1;
    }
    iniciarAmbitoLocal(tabla);
    simbolo_copia = (SIMBOLO*)malloc(sizeof(SIMBOLO));
-   strcpy(simbolo_copia.identificador, $3.lexema);
-   simbolo_copia.cat_simbolo=FUNCION;
-   simbolo_copia.tipo=tipo_actual;
-   simbolo_copia.categoria=ESCALAR;
-   simbolo_copia.info1=0;
-   simbolo_copia.info2=0;
+   strcpy(simbolo_copia->identificador, $3.lexema);
+   simbolo_copia->cat_simbolo=FUNCION;
+   simbolo_copia->tipo=tipo_actual;
+   simbolo_copia->categoria=ESCALAR;
+   simbolo_copia->info1=0;
+   simbolo_copia->info2=0;
    insertar(tabla, $3.lexema, simbolo_copia);
    pos_variable_local_actual = 1;
    pos_parametro = 0;
@@ -248,19 +247,19 @@ bloque: condicional {
 asignacion: TOK_IDENTIFICADOR TOK_ASIGNACION exp {
    SIMBOLO* simbolo;
    if(buscar(tabla, $1.lexema, &simbolo) == 0){
-      printf("****Error semantico en lin %d: Acceso a variable no declarada %s.", nline, $1.lexema);
+      printf("****Error semantico en lin %ld: Acceso a variable no declarada %s.", nline, $1.lexema);
       return -1;
    }
    if(simbolo->cat_simbolo == FUNCION){
-      printf("****Error semantico en lin %d: Asignacion incompatible.", nline);
+      printf("****Error semantico en lin %ld: Asignacion incompatible.", nline);
       return -1;
    }
    if(simbolo->categoria == VECTOR){
-      printf("****Error semantico en lin %d: Asignacion incompatible.", nline);
+      printf("****Error semantico en lin %ld: Asignacion incompatible.", nline);
       return -1;
    }
    if(simbolo->tipo != $3.tipo){
-      printf("****Error semantico en lin %d: Asignacion incompatible.", nline);
+      printf("****Error semantico en lin %ld: Asignacion incompatible.", nline);
       return -1;
    }
    if(en_funcion == 1){
@@ -271,10 +270,10 @@ asignacion: TOK_IDENTIFICADOR TOK_ASIGNACION exp {
    }
 } | elemento_vector TOK_ASIGNACION exp {
    if($1.tipo != $3.tipo){
-      printf("****Error semantico en lin %d: Asignacion incompatible.", nline);
+      printf("****Error semantico en lin %ld: Asignacion incompatible.", nline);
       return -1;
    }
-   escribir_operando(out, $1.valor_entero, 0);
+   escribir_operando(out, &$1.valor_entero, 0);
    escribir_elemento_vector(out, $1.lexema, tamanio_vector_actual, $3.es_direccion);
    asignarDestinoEnPila(out, $3.es_direccion);
 };
@@ -282,15 +281,15 @@ asignacion: TOK_IDENTIFICADOR TOK_ASIGNACION exp {
 elemento_vector: TOK_IDENTIFICADOR TOK_CORCHETEIZQUIERDO exp TOK_CORCHETEDERECHO {
    SIMBOLO* simbolo;
    if(buscar(tabla, $1.lexema, &simbolo) == 0){
-      printf("****Error semantico en lin %d: Acceso a variable no declarada %s.", nline, $1.lexema);
+      printf("****Error semantico en lin %ld: Acceso a variable no declarada %s.", nline, $1.lexema);
       return -1;
    }
    if(simbolo->categoria != VECTOR){
-      printf("****Error semantico en lin %d: Intento de indexacion de una variable que no es de tipo vector.", nline);
+      printf("****Error semantico en lin %ld: Intento de indexacion de una variable que no es de tipo vector.", nline);
       return -1;
    }
    if($3.tipo != ENTERO){
-      printf("****Error semantico en lin %d: El indice en una operacion de indexacion tiene que ser de tipo entero.", nline);
+      printf("****Error semantico en lin %ld: El indice en una operacion de indexacion tiene que ser de tipo entero.", nline);
       return -1;
    }
    $$.tipo = simbolo->tipo;
@@ -304,12 +303,13 @@ condicional: ifthen{
 }
 
 ifthen: if_check TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA {
-   ifthen_fin(out, $1.etiqueta)
+   ifthenelse_fin_then(out, $1.etiqueta);
+   ifthen_fin(out, $1.etiqueta);
 }
 
 if_check: TOK_IF TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO {
    if($3.tipo != BOOLEANO){
-      printf("****Error semantico en lin %d: Condicional con condicion de tipo int.", nline);
+      printf("****Error semantico en lin %ld: Condicional con condicion de tipo int.", nline);
       return -1;
    }
    $$.etiqueta = etiqueta++;
@@ -317,22 +317,12 @@ if_check: TOK_IF TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO {
 }
 
 ifthenelse: if_else_sentencias TOK_ELSE TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA {
-   ifthenelse_fin(out, $1.etiqueta)
+   ifthenelse_fin(out, $1.etiqueta);
 };
 
-if_else_sentencias: if_else_check TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA {
+if_else_sentencias: if_check TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA {
    $$.etiqueta = $1.etiqueta;
    ifthenelse_fin_then(out, $1.etiqueta);
-}
-
-
-if_else_check: TOK_IF TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO {
-   if($3.tipo != BOOLEANO){
-      printf("****Error semantico en lin %d: Condicional con condicion de tipo int.", nline);
-      return -1;
-   }
-   $$.etiqueta = etiqueta++;
-   ifthenelse_inicio(out, $3.es_direccion, $$.etiqueta);
 }
 
 bucle: while_check TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA {
@@ -341,7 +331,7 @@ bucle: while_check TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA {
 
 while_check: inicio_while TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO {
    if($3.tipo != BOOLEANO){
-      printf("****Error semantico en lin %d: Bucle con condicion de tipo int.", nline);
+      printf("****Error semantico en lin %ld: Bucle con condicion de tipo int.", nline);
       return -1;
    }
    $$.etiqueta = $1.etiqueta;
@@ -356,12 +346,12 @@ inicio_while: TOK_WHILE {
 lectura: TOK_SCANF TOK_IDENTIFICADOR {
    SIMBOLO* simbolo;
    if(buscar(tabla, $2.lexema, &simbolo) == 0){
-      printf("****Error semantico en lin %d: Acceso a variable no declarada %s.", nline, $2.lexema);
+      printf("****Error semantico en lin %ld: Acceso a variable no declarada %s.", nline, $2.lexema);
       return -1;
    }
 
    if(simbolo->categoria != ESCALAR){
-      printf("****Error semantico en lin %d: Asignacion incompatible.", nline);
+      printf("****Error semantico en lin %ld: Asignacion incompatible.", nline);
       return -1;
    }
    leer(out, $2.lexema, simbolo->tipo);
@@ -374,7 +364,7 @@ escritura: TOK_PRINTF exp {
 retorno_funcion: TOK_RETURN exp {
    ret ++;
    if(tipo_ret != $2.tipo){
-      printf("****Error semantico en lin %d: Tipo de retorno de la funcion incorrecto.", nline);
+      printf("****Error semantico en lin %ld: Tipo de retorno de la funcion incorrecto.", nline);
       return -1;
    }
    retornarFuncion(out, $2.es_direccion);
@@ -382,7 +372,7 @@ retorno_funcion: TOK_RETURN exp {
 
 exp: exp TOK_MAS exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
-      printf("****Error semantico en lin %d: Operacion aritmetica con operandos boolean.", nline);
+      printf("****Error semantico en lin %ld: Operacion aritmetica con operandos boolean.", nline);
       return -1;
    }
    $$.tipo = ENTERO;
@@ -390,7 +380,7 @@ exp: exp TOK_MAS exp {
    sumar(out, $1.es_direccion, $3.es_direccion);
 } | exp TOK_MENOS exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
-      printf("****Error semantico en lin %d: Operacion aritmetica con operandos boolean.", nline);
+      printf("****Error semantico en lin %ld: Operacion aritmetica con operandos boolean.", nline);
       return -1;
    }
    $$.tipo = ENTERO;
@@ -398,7 +388,7 @@ exp: exp TOK_MAS exp {
    restar(out, $1.es_direccion, $3.es_direccion);
 } | exp TOK_DIVISION exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
-      printf("****Error semantico en lin %d: Operacion aritmetica con operandos boolean.", nline);
+      printf("****Error semantico en lin %ld: Operacion aritmetica con operandos boolean.", nline);
       return -1;
    }
    $$.tipo = ENTERO;
@@ -406,7 +396,7 @@ exp: exp TOK_MAS exp {
    dividir(out, $1.es_direccion, $3.es_direccion);
 } | exp TOK_ASTERISCO exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
-      printf("****Error semantico en lin %d: Operacion aritmetica con operandos boolean.", nline);
+      printf("****Error semantico en lin %ld: Operacion aritmetica con operandos boolean.", nline);
       return -1;
    }
    $$.tipo = ENTERO;
@@ -414,7 +404,7 @@ exp: exp TOK_MAS exp {
    multiplicar(out, $1.es_direccion, $3.es_direccion);
 } | TOK_MENOS exp {
    if($2.tipo != ENTERO){
-      printf("****Error semantico en lin %d: Operacion aritmetica con operandos boolean.", nline);
+      printf("****Error semantico en lin %ld: Operacion aritmetica con operandos boolean.", nline);
       return -1;
    }
    $$.tipo = ENTERO;
@@ -422,7 +412,7 @@ exp: exp TOK_MAS exp {
    cambiar_signo(out, $2.es_direccion);
 } | exp TOK_AND exp {
    if($1.tipo != BOOLEANO || $3.tipo != BOOLEANO){
-      printf("****Error semantico en lin %d: Operacion logica con operandos int.", nline);
+      printf("****Error semantico en lin %ld: Operacion logica con operandos int.", nline);
       return -1;
    }
    $$.tipo = BOOLEANO;
@@ -430,7 +420,7 @@ exp: exp TOK_MAS exp {
    y(out, $1.es_direccion, $3.es_direccion);
 } | exp TOK_OR exp {
    if($1.tipo != BOOLEANO || $3.tipo != BOOLEANO){
-      printf("****Error semantico en lin %d: Operacion logica con operandos int.", nline);
+      printf("****Error semantico en lin %ld: Operacion logica con operandos int.", nline);
       return -1;
    }
    $$.tipo = BOOLEANO;
@@ -438,7 +428,7 @@ exp: exp TOK_MAS exp {
    o(out, $1.es_direccion, $3.es_direccion);
 } | TOK_NOT exp {
    if($2.tipo != BOOLEANO){
-      printf("****Error semantico en lin %d: Operacion logica con operandos int.", nline);
+      printf("****Error semantico en lin %ld: Operacion logica con operandos int.", nline);
       return -1;
    }
    $$.tipo = BOOLEANO;
@@ -448,15 +438,15 @@ exp: exp TOK_MAS exp {
 } | TOK_IDENTIFICADOR {
    SIMBOLO* simbolo;
    if(buscar(tabla, $1.lexema, &simbolo) == 0){
-      printf("****Error semantico en lin %d: Acceso a variable no declarada %s.", nline, $1.lexema);
+      printf("****Error semantico en lin %ld: Acceso a variable no declarada %s.", nline, $1.lexema);
       return -1;
    }
    if(simbolo->cat_simbolo == FUNCION){
-      printf("****Error semantico en lin %d: Numero incorrecto de parametros en llamada a funcion.", nline);
+      printf("****Error semantico en lin %ld: Numero incorrecto de parametros en llamada a funcion.", nline);
       return -1;
    }
    if(simbolo->categoria == VECTOR){
-      printf("****Error semantico en lin %d: No se puede usar un vector sin indexar.", nline);
+      printf("****Error semantico en lin %ld: No se puede usar un vector sin indexar.", nline);
       return -1;
    }
    $$.tipo = simbolo->tipo;
@@ -491,7 +481,7 @@ exp: exp TOK_MAS exp {
    SIMBOLO* simbolo;
    buscar(tabla, $1.lexema, &simbolo);
    if(simbolo->info1 != num_parametros){
-      printf("****Error semantico en lin %d: Numero incorrecto de parametros en llamada a funcion.", nline);
+      printf("****Error semantico en lin %ld: Numero incorrecto de parametros en llamada a funcion.", nline);
       return -1;
    }
    llamarFuncion(out, $1.lexema, simbolo->info1);
@@ -503,15 +493,15 @@ exp: exp TOK_MAS exp {
 idf_llamada_funcion: TOK_IDENTIFICADOR {
    SIMBOLO* simbolo;
    if(buscar(tabla, $1.lexema, &simbolo) == 0){
-      printf("****Error semantico en lin %d: Acceso a variable no declarada %s.", nline, $1.lexema);
+      printf("****Error semantico en lin %ld: Acceso a variable no declarada %s.", nline, $1.lexema);
       return -1;
    }
    if(simbolo->cat_simbolo != FUNCION){
-      printf("****Error semantico en lin %d: %s no es una funcion.", nline, simbolo->identificador);
+      printf("****Error semantico en lin %ld: %s no es una funcion.", nline, simbolo->identificador);
       return -1;
    }
    if(en_funcion != 0){
-      printf("****Error semantico en lin %d: No esta permitido el uso de llamadas a funciones como parametros de otras funciones.", nline);
+      printf("****Error semantico en lin %ld: No esta permitido el uso de llamadas a funciones como parametros de otras funciones.", nline);
       return -1;
    }
    num_parametros = 0;
@@ -531,7 +521,7 @@ resto_lista_expresiones: TOK_COMA exp resto_lista_expresiones {
 
 comparacion: exp TOK_IGUAL exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
-      printf("****Error semantico en lin %d: Comparacion con operandos boolean.", nline);
+      printf("****Error semantico en lin %ld: Comparacion con operandos boolean.", nline);
       return -1;
    }
    $$.tipo = BOOLEANO;
@@ -540,7 +530,7 @@ comparacion: exp TOK_IGUAL exp {
    etiqueta ++;
 } | exp TOK_DISTINTO exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
-      printf("****Error semantico en lin %d: Comparacion con operandos boolean.", nline);
+      printf("****Error semantico en lin %ld: Comparacion con operandos boolean.", nline);
       return -1;
    }
    $$.tipo = BOOLEANO;
@@ -549,7 +539,7 @@ comparacion: exp TOK_IGUAL exp {
    etiqueta ++;
 } | exp TOK_MENORIGUAL exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
-      printf("****Error semantico en lin %d: Comparacion con operandos boolean.", nline);
+      printf("****Error semantico en lin %ld: Comparacion con operandos boolean.", nline);
       return -1;
    }
    $$.tipo = BOOLEANO;
@@ -558,7 +548,7 @@ comparacion: exp TOK_IGUAL exp {
    etiqueta ++;
 } | exp TOK_MAYORIGUAL exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
-      printf("****Error semantico en lin %d: Comparacion con operandos boolean.", nline);
+      printf("****Error semantico en lin %ld: Comparacion con operandos boolean.", nline);
       return -1;
    }
    $$.tipo = BOOLEANO;
@@ -567,7 +557,7 @@ comparacion: exp TOK_IGUAL exp {
    etiqueta ++;
 } | exp TOK_MENOR exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
-      printf("****Error semantico en lin %d: Comparacion con operandos boolean.", nline);
+      printf("****Error semantico en lin %ld: Comparacion con operandos boolean.", nline);
       return -1;
    }
    $$.tipo = BOOLEANO;
@@ -576,7 +566,7 @@ comparacion: exp TOK_IGUAL exp {
    etiqueta ++;
 } | exp TOK_MAYOR exp {
    if($1.tipo != ENTERO || $3.tipo != ENTERO){
-      printf("****Error semantico en lin %d: Comparacion con operandos boolean.", nline);
+      printf("****Error semantico en lin %ld: Comparacion con operandos boolean.", nline);
       return -1;
    }
    $$.tipo = BOOLEANO;
@@ -613,13 +603,13 @@ constante_entera: TOK_CONSTANTE_ENTERA {
 identificador: TOK_IDENTIFICADOR {
    if(clase_actual == VECTOR){
       if(tamanio_vector_actual<1||tamanio_vector_actual>MAX_TAMANIO_VECTOR){
-         printf("****Error semantico en lin %d: El tamanyo del vector %s excede los limites permitidos (1,64).", nline, $1.lexema);
+         printf("****Error semantico en lin %ld: El tamanyo del vector %s excede los limites permitidos (1,64).", nline, $1.lexema);
          return -1;
       }
    }
    if(getLocal(tabla) == 1){
       if(clase_actual==VECTOR){
-         printf("****Error semantico en lin %d:Variable local de tipo no escalar.", nline);
+         printf("****Error semantico en lin %ld:Variable local de tipo no escalar.", nline);
          return -1;
       }
       pos_variable_local_actual++;
@@ -630,16 +620,16 @@ identificador: TOK_IDENTIFICADOR {
    simbolo = (SIMBOLO*)malloc(sizeof(SIMBOLO));
    strcpy(simbolo->identificador, $1.lexema);
    simbolo->cat_simbolo=VARIABLE;
-   simbolo->tipo=tipo_actual
+   simbolo->tipo=tipo_actual;
    simbolo->categoria=clase_actual;
    if(clase_actual == ESCALAR){
-      simbolo->info1=$1.valor;
+      simbolo->info1=$1.valor_entero;
    } else{
       simbolo->info1=tamanio_vector_actual;
    }
    simbolo->info2=pos_variable_local_actual;
    if(insertar(tabla, $1.lexema, simbolo) == 0){
-      printf("****Error semantico en lin %d: Declaracion duplicada.", nline);
+      printf("****Error semantico en lin %ld: Declaracion duplicada.", nline);
       return -1;
    }
 };
@@ -659,7 +649,7 @@ idpf: TOK_IDENTIFICADOR {
 
    simbolo->info2=pos_parametro;
    if(insertar(tabla, $1.lexema, simbolo) == 0){
-      printf("****Error semantico en lin %d: Declaracion duplicada.", nline);
+      printf("****Error semantico en lin %ld: Declaracion duplicada.", nline);
       return -1;
    }
    pos_parametro ++;

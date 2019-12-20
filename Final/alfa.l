@@ -1,8 +1,10 @@
 %{
 #include <stdio.h>
 #include <string.h>
-
+#include "alfa.h"
+#define YYSTYPE tipo_atributos
 #include "alfa.tab.h"
+
 
 
 
@@ -82,13 +84,13 @@ return { yymorph=0; ncolumn+=yyleng; fprintf(out, ";D:\t%s\n", yytext); return T
 {menor} { yymorph=0; ncolumn+=yyleng; fprintf(out, ";D:\t%s\n", yytext); return TOK_MENOR; }
 {mayor} { yymorph=0; ncolumn+=yyleng; fprintf(out, ";D:\t%s\n", yytext); return TOK_MAYOR; }
 
-true { yymorph=0; ncolumn+=yyleng; fprintf(out, ";D:\t%s\n", yytext); yylval.atributos.valor_entero = 1; return TOK_TRUE; }
-false { yymorph=0; ncolumn+=yyleng; fprintf(out, ";D:\t%s\n", yytext); yylval.atributos.valor_entero = 0; return TOK_FALSE; }
+true { yymorph=0; ncolumn+=yyleng; fprintf(out, ";D:\t%s\n", yytext); yylval.valor_entero = 1; return TOK_TRUE; }
+false { yymorph=0; ncolumn+=yyleng; fprintf(out, ";D:\t%s\n", yytext); yylval.valor_entero = 0; return TOK_FALSE; }
 
-[a-zA-Z][0-9a-zA-Z]{0,99} { yymorph=0; ncolumn+=yyleng; fprintf(out, ";D:\t%s\n", yytext); strcpy(yylval.atributos.lexema, yytext); return TOK_IDENTIFICADOR; }
+[a-zA-Z][0-9a-zA-Z]{0,99} { yymorph=0; ncolumn+=yyleng; fprintf(out, ";D:\t%s\n", yytext); strcpy(yylval.lexema, yytext); return TOK_IDENTIFICADOR; }
 [a-zA-Z][0-9a-zA-Z]{100,} { yymorph=1; fprintf(stderr, "****Error en [lin %li, col %li]: idenficador demasiado largo(%s)\n", nline, ncolumn ,yytext); return TOK_ERROR; }
 
-[0-9]+ { yymorph=0; ncolumn+=yyleng; fprintf(out, ";D:\t%s\n", yytext); yylval.atributos.valor_entero = atoi(yytext); return TOK_CONSTANTE_ENTERA; }
+[0-9]+ { yymorph=0; ncolumn+=yyleng; fprintf(out, ";D:\t%s\n", yytext); yylval.valor_entero = atoi(yytext); return TOK_CONSTANTE_ENTERA; }
 
 
 . { yymorph=1; fprintf(stderr, "****Error en [lin %li, col %li]: símbolo no permitido (%s)\n", nline, ncolumn, yytext); return TOK_ERROR; }

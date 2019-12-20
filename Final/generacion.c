@@ -13,7 +13,7 @@ void escribir_cabecera_bss(FILE* fpasm, tablaSimbolos* tabla){
     SIMBOLO* simbolo;
     simbolo = entrada->value;
     if(simbolo->cat_simbolo == VARIABLE){
-      if(simbolo->categoria){
+      if(simbolo->categoria == ENTERO){
         fprintf(fpasm, "__%s resd 1\n", simbolo->identificador);
       }else{
         fprintf(fpasm, "__%s resd %d\n", simbolo->identificador, simbolo->info1);
@@ -49,6 +49,7 @@ void declarar_variable(FILE* fpasm, char * nombre,  int tipo,  int tamano){
 void escribir_segmento_codigo(FILE* fpasm){
   fprintf(fpasm, "segment .text\n");
   fprintf(fpasm, "global main\n");
+  fprintf(fpasm, "extern malloc, free\n");
   fprintf(fpasm, "extern scan_int, print_int, scan_boolean, print_boolean\n");
   fprintf(fpasm, "extern print_endofline, print_blank, print_string\n");
 }
@@ -72,10 +73,7 @@ void escribir_inicio_main(FILE* fpasm){
          ·Salir del programa (ret).
 */
 void escribir_fin(FILE* fpasm){
-  fprintf(fpasm, "_end:\n");
-  fprintf(fpasm, "mov dword esp, [__esp]\n");
-  fprintf(fpasm, "ret\n");
-
+  fprintf(fpasm, "jmp _end\n");
   /* Implementamos el error de division por cero */
   fprintf(fpasm, "_division_by_cero:\n");
   fprintf(fpasm, "push dword _division_by_cero_s\n");
@@ -89,6 +87,10 @@ void escribir_fin(FILE* fpasm){
   fprintf(fpasm, "call print_string\n");
   fprintf(fpasm, "add esp, 4\n");
   fprintf(fpasm, "jmp _end\n");
+
+  fprintf(fpasm, "_end:\n");
+  fprintf(fpasm, "mov dword esp, [__esp]\n");
+  fprintf(fpasm, "ret\n");
 }
 
 /*
