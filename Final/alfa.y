@@ -14,6 +14,7 @@
    int num_var_locales = 0;
    int pos_parametro = 1;
    int num_parametros=0;
+   int num_parametros_act=0;
    int en_funcion = 0;
    int ret = 0;
 
@@ -91,9 +92,7 @@
 %type <atributos> fn_name
 %type <atributos> asignacion
 %type <atributos> elemento_vector
-%type <atributos> ifthen
 %type <atributos> if_check
-%type <atributos> ifthenelse
 %type <atributos> if_else_sentencias
 %type <atributos> bucle
 %type <atributos> while_check
@@ -110,6 +109,7 @@ programa: TOK_MAIN TOK_LLAVEIZQUIERDA declaraciones data_segment funciones main_
 };
 
 data_segment: {
+   escribir_subseccion_data(out);
    escribir_cabecera_bss(out, tabla);
    escribir_segmento_codigo(out);
 }
@@ -161,7 +161,6 @@ funcion: fn_declaration sentencias TOK_LLAVEDERECHA {
    SIMBOLO* simbolo;
    buscar(tabla, $1.lexema, &simbolo);
    simbolo->info1 = num_parametros;
-   simbolo->info2 = num_var_locales;
    if(ret == 0){
       printf("****Error semantico en lin %ld: Funcion %s sin sentencia de retorno.", nline, $1.lexema);
       return -1;
@@ -170,10 +169,11 @@ funcion: fn_declaration sentencias TOK_LLAVEDERECHA {
 
 fn_declaration: fn_name TOK_PARENTESISIZQUIERDO parametros_funcion TOK_PARENTESISDERECHO TOK_LLAVEIZQUIERDA declaraciones_funcion {
    SIMBOLO* simbolo;
+   en_funcion = 0;
    buscar(tabla, $1.lexema, &simbolo);
    simbolo->info1 = num_parametros;
-   simbolo->info2 = num_var_locales;
    strcpy($$.lexema, $1.lexema);
+   $$.tipo = $1.tipo;
    ret = 0;
    declararFuncion(out, $1.lexema, num_var_locales);
 }
@@ -201,12 +201,14 @@ fn_name: TOK_FUNCTION tipo TOK_IDENTIFICADOR {
    simbolo_copia->info1=0;
    simbolo_copia->info2=0;
    insertar(tabla, $3.lexema, simbolo_copia);
-   pos_variable_local_actual = 1;
+   pos_variable_local_actual = 0;
    pos_parametro = 0;
    num_var_locales = 0;
    num_parametros = 0;
    strcpy($$.lexema, $3.lexema);
+   $$.tipo = tipo_actual;
    tipo_ret = tipo_actual;
+   en_funcion = 1;
 };
 
 parametros_funcion: parametro_funcion resto_parametros_funcion {
@@ -218,7 +220,7 @@ resto_parametros_funcion:TOK_PUNTOYCOMA parametro_funcion resto_parametros_funci
 };
 
 parametro_funcion: tipo idpf {
-   pos_variable_local_actual++;
+   pos_parametro++;
    num_parametros ++;
 };
 
@@ -246,7 +248,9 @@ bloque: condicional {
 
 asignacion: TOK_IDENTIFICADOR TOK_ASIGNACION exp {
    SIMBOLO* simbolo;
-   if(buscar(tabla, $1.lexema, &simbolo) == 0){
+   int res;
+   res = buscar(tabla, $1.lexema, &simbolo);
+   if(res == 0){
       printf("****Error semantico en lin %ld: Acceso a variable no declarada %s.", nline, $1.lexema);
       return -1;
    }
@@ -262,7 +266,7 @@ asignacion: TOK_IDENTIFICADOR TOK_ASIGNACION exp {
       printf("****Error semantico en lin %ld: Asignacion incompatible.", nline);
       return -1;
    }
-   if(en_funcion == 1){
+   if(res == 2){
       escribirVariableLocal(out, simbolo->info2);
       asignarDestinoEnPila(out, $3.es_direccion);
    }else{
@@ -298,16 +302,13 @@ elemento_vector: TOK_IDENTIFICADOR TOK_CORCHETEIZQUIERDO exp TOK_CORCHETEDERECHO
    escribir_elemento_vector(out, $1.lexema, simbolo->info1 , $3.es_direccion);
 };
 
-condicional: ifthen{
-} | ifthenelse{
+condicional: if_else_sentencias TOK_LLAVEDERECHA{
+   ifthenelse_fin(out, $1.etiqueta);
+} | if_else_sentencias TOK_LLAVEDERECHA TOK_ELSE TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA{
+   ifthenelse_fin(out, $1.etiqueta);
 }
 
-ifthen: if_check TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA {
-   ifthenelse_fin_then(out, $1.etiqueta);
-   ifthen_fin(out, $1.etiqueta);
-}
-
-if_check: TOK_IF TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO {
+if_check: TOK_IF TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO TOK_LLAVEIZQUIERDA{
    if($3.tipo != BOOLEANO){
       printf("****Error semantico en lin %ld: Condicional con condicion de tipo int.", nline);
       return -1;
@@ -316,13 +317,9 @@ if_check: TOK_IF TOK_PARENTESISIZQUIERDO exp TOK_PARENTESISDERECHO {
    ifthen_inicio(out, $3.es_direccion, $$.etiqueta);
 }
 
-ifthenelse: if_else_sentencias TOK_ELSE TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA {
-   ifthenelse_fin(out, $1.etiqueta);
-};
-
-if_else_sentencias: if_check TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA {
+if_else_sentencias: if_check sentencias {
    $$.etiqueta = $1.etiqueta;
-   ifthenelse_fin_then(out, $1.etiqueta);
+   ifthenelse_fin_then(out, $$.etiqueta);
 }
 
 bucle: while_check TOK_LLAVEIZQUIERDA sentencias TOK_LLAVEDERECHA {
@@ -437,7 +434,9 @@ exp: exp TOK_MAS exp {
    etiqueta ++;
 } | TOK_IDENTIFICADOR {
    SIMBOLO* simbolo;
-   if(buscar(tabla, $1.lexema, &simbolo) == 0){
+   int res;
+   res = buscar(tabla, $1.lexema, &simbolo);
+   if(res == 0){
       printf("****Error semantico en lin %ld: Acceso a variable no declarada %s.", nline, $1.lexema);
       return -1;
    }
@@ -453,13 +452,14 @@ exp: exp TOK_MAS exp {
    $$.es_direccion = 1;
    if(simbolo->cat_simbolo == PARAMETRO){
       escribirParametro(out, simbolo->info2, num_parametros);
-      operandoEnPilaAArgumento(out, 1);
    }else if(simbolo->cat_simbolo == VARIABLE){
-      if(en_funcion != 0){
+      if(res == 2){
          escribirVariableLocal(out, simbolo->info2);
-         operandoEnPilaAArgumento(out, 1);
       }else{
          escribir_operando(out, simbolo->identificador, 1);
+         if(en_funcion == 1){
+            operandoEnPilaAArgumento(out, 1);
+         }
       }
    }
 } | constante {
@@ -480,7 +480,7 @@ exp: exp TOK_MAS exp {
 } | idf_llamada_funcion TOK_PARENTESISIZQUIERDO lista_expresiones TOK_PARENTESISDERECHO {
    SIMBOLO* simbolo;
    buscar(tabla, $1.lexema, &simbolo);
-   if(simbolo->info1 != num_parametros){
+   if(simbolo->info1 != num_parametros_act){
       printf("****Error semantico en lin %ld: Numero incorrecto de parametros en llamada a funcion.", nline);
       return -1;
    }
@@ -504,18 +504,18 @@ idf_llamada_funcion: TOK_IDENTIFICADOR {
       printf("****Error semantico en lin %ld: No esta permitido el uso de llamadas a funciones como parametros de otras funciones.", nline);
       return -1;
    }
-   num_parametros = 0;
+   num_parametros_act = 0;
    en_funcion = 1;
    strcpy($$.lexema, simbolo->identificador);
 }
 
 lista_expresiones: exp resto_lista_expresiones {
-   num_parametros ++;
+   num_parametros_act ++;
 } | {
 };
 
 resto_lista_expresiones: TOK_COMA exp resto_lista_expresiones {
-   num_parametros ++;
+   num_parametros_act ++;
 } | {
 };
 
@@ -640,20 +640,13 @@ idpf: TOK_IDENTIFICADOR {
    strcpy(simbolo->identificador, $1.lexema);
    simbolo->cat_simbolo=PARAMETRO;
    simbolo->tipo=tipo_actual;
-   simbolo->categoria=clase_actual;
-   if(clase_actual == ESCALAR){
-      simbolo->info1=0;
-   } else{
-      simbolo->info1=tamanio_vector_actual;
-   }
-
+   simbolo->categoria=ESCALAR;
+   simbolo->info1=0;
    simbolo->info2=pos_parametro;
    if(insertar(tabla, $1.lexema, simbolo) == 0){
       printf("****Error semantico en lin %ld: Declaracion duplicada.", nline);
       return -1;
    }
-   pos_parametro ++;
-   num_parametros ++;
 };
 %%
 

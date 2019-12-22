@@ -95,7 +95,7 @@ int buscarAmbitoLocal(tablaSimbolos* tabla, char* key, SIMBOLO** value){
   entrada = findValue(tabla->ambitoLocal, key);
   if(entrada != NULL){
     *value = entrada->value;
-    return 1;
+    return 2;
   }
   entrada = findValue(tabla->ambitoGlobal, key);
   if(entrada != NULL){
