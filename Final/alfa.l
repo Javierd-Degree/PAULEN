@@ -43,7 +43,9 @@ mayor ">"
 
 
 %%
+\r\n { yymorph=0; nline++; ncolumn=1; }
 \n { yymorph=0; nline++; ncolumn=1; }
+\r { yymorph=0; }
 " " { yymorph=0; ncolumn+=yyleng; }
 \t { yymorph=0; ncolumn+=yyleng; }
 "//".* { yymorph=0; }
